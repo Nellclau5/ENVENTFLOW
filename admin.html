@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EventFlow">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+  <link href="css/pwa.css" rel="stylesheet">
+  <title>Administration — EventFlow Africa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/main.css" rel="stylesheet">
+  <link href="css/dashboard.css" rel="stylesheet">
+  <link href="css/admin.css" rel="stylesheet">
+</head>
+<body class="dashboard-page" data-page="admin">
+
+  <div class="dashboard-layout">
+    <aside class="dashboard-sidebar" id="dashboard-sidebar">
+      <a href="admin.html" class="sidebar-brand">
+        <img src="img/logo.png" alt="EventFlow Africa" class="ef-logo ef-logo-sidebar" width="200" height="42">
+      </a>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-title">Administration</div>
+        <a href="admin.html" class="sidebar-nav-item active" data-page="admin.html"><i class="bi bi-shield-lock"></i> Vue d'ensemble</a>
+        <a href="admin.html?tab=users" class="sidebar-nav-item"><i class="bi bi-people"></i> Utilisateurs</a>
+        <a href="admin.html?tab=events" class="sidebar-nav-item"><i class="bi bi-calendar-event"></i> Événements</a>
+        <a href="admin.html?tab=categories" class="sidebar-nav-item"><i class="bi bi-tags"></i> Catégories</a>
+        <div class="sidebar-section-title">Navigation</div>
+        <a href="dashboard.html" class="sidebar-nav-item"><i class="bi bi-grid"></i> Dashboard</a>
+        <a href="index.html" class="sidebar-nav-item"><i class="bi bi-house"></i> Site public</a>
+        <button type="button" class="sidebar-nav-item" data-action="logout"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> Déconnexion</button>
+      </nav>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div class="d-flex align-items-center gap-3">
+          <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir le menu latéral"><i class="bi bi-list" aria-hidden="true"></i></button>
+          <h1><i class="bi bi-shield-lock me-2"></i>Administration</h1>
+        </div>
+        <div class="profile-avatar avatar-sm" data-user-initials></div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Onglets -->
+        <nav class="nav admin-tabs mb-4" role="tablist" aria-label="Sections administration">
+          <button type="button" class="nav-link active" id="tab-overview-btn" data-bs-toggle="tab" data-bs-target="#tab-overview" role="tab" aria-selected="true" aria-controls="tab-overview">Vue d'ensemble</button>
+          <button type="button" class="nav-link" id="tab-users-btn" data-bs-toggle="tab" data-bs-target="#tab-users" role="tab" aria-selected="false" aria-controls="tab-users" tabindex="-1">Utilisateurs</button>
+          <button type="button" class="nav-link" id="tab-events-btn" data-bs-toggle="tab" data-bs-target="#tab-events" role="tab" aria-selected="false" aria-controls="tab-events" tabindex="-1">Événements</button>
+          <button type="button" class="nav-link" id="tab-categories-btn" data-bs-toggle="tab" data-bs-target="#tab-categories" role="tab" aria-selected="false" aria-controls="tab-categories" tabindex="-1">Catégories</button>
+        </nav>
+
+        <div class="tab-content">
+          <!-- Overview -->
+          <div class="tab-pane fade show active" id="tab-overview" role="tabpanel" aria-labelledby="tab-overview-btn" tabindex="0">
+            <div class="admin-stat-grid" id="admin-stats"></div>
+            <div class="row g-4">
+              <div class="col-lg-6">
+                <div class="admin-chart-card">
+                  <h5 class="mb-3">Événements par catégorie</h5>
+                  <div id="category-chart"></div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="admin-chart-card">
+                  <h5 class="mb-3">Actions rapides</h5>
+                  <div class="admin-quick-actions">
+                    <a href="create-event.html" class="btn btn-ef-primary"><i class="bi bi-plus me-1"></i> Créer événement</a>
+                    <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-users">Gérer utilisateurs</button>
+                    <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-categories">Gérer catégories</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Users -->
+          <div class="tab-pane fade" id="tab-users" role="tabpanel" aria-labelledby="tab-users-btn" tabindex="0">
+            <div class="dash-table-card">
+              <div class="dash-table-header"><h3>Gestion des utilisateurs</h3></div>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead>
+                    <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Inscription</th><th>Modifier rôle</th></tr>
+                  </thead>
+                  <tbody id="admin-users-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Events -->
+          <div class="tab-pane fade" id="tab-events" role="tabpanel" aria-labelledby="tab-events-btn" tabindex="0">
+            <div class="dash-table-card">
+              <div class="dash-table-header"><h3>Tous les événements</h3></div>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead>
+                    <tr><th>Titre</th><th>Organisateur</th><th>Catégorie</th><th>Date</th><th>Statut</th><th>Revenus</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="admin-events-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Categories -->
+          <div class="tab-pane fade" id="tab-categories" role="tabpanel" aria-labelledby="tab-categories-btn" tabindex="0">
+            <div class="row g-4">
+              <div class="col-lg-6">
+                <div class="dash-table-card p-4">
+                  <h5 class="mb-3">Catégories existantes</h5>
+                  <div id="categories-list"></div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="dash-table-card p-4">
+                  <h5 class="mb-3">Ajouter une catégorie</h5>
+                  <form id="add-category-form">
+                    <div class="mb-3">
+                      <label class="form-label" for="category-name">Nom de la catégorie</label>
+                      <input type="text" class="form-control" id="category-name" required placeholder="Ex: Festival">
+                    </div>
+                    <button type="submit" class="btn btn-ef-primary"><i class="bi bi-plus me-1"></i> Ajouter</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/tickets.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

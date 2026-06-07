@@ -1,0 +1,20 @@
+{
+  "name": "eventflow-africa",
+  "private": true,
+  "scripts": {
+    "serve": "npx serve .",
+    "deploy:rules": "npx firebase-tools deploy --only firestore --project eventflow-africa",
+    "deploy:hosting": "npx firebase-tools deploy --only hosting --project eventflow-africa",
+    "deploy": "npx firebase-tools deploy --project eventflow-africa",
+    "pwa:icons": "node scripts/generate-pwa-icons.js"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.19.1",
+    "sharp": "^0.34.5"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "qrcode": "^1.5.4"
+  }
+}
+

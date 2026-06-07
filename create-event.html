@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EventFlow">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+  <link href="css/pwa.css" rel="stylesheet">
+  <title>Créer un événement — EventFlow Africa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/main.css" rel="stylesheet">
+  <link href="css/dashboard.css" rel="stylesheet">
+</head>
+<body class="dashboard-page" data-page="create-event">
+
+  <div class="dashboard-layout">
+    <aside class="dashboard-sidebar" id="dashboard-sidebar">
+      <a href="dashboard.html" class="sidebar-brand">
+        <img src="img/logo.png" alt="EventFlow Africa" class="ef-logo ef-logo-sidebar" width="200" height="42">
+      </a>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-title">Menu</div>
+        <a href="dashboard.html" class="sidebar-nav-item" data-page="dashboard.html"><i class="bi bi-grid"></i> Dashboard</a>
+        <a href="create-event.html" class="sidebar-nav-item active" data-page="create-event.html"><i class="bi bi-plus-circle"></i> Créer un événement</a>
+        <a href="events.html" class="sidebar-nav-item"><i class="bi bi-calendar-event"></i> Voir le site</a>
+        <button type="button" class="sidebar-nav-item" data-action="logout"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> Déconnexion</button>
+      </nav>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div class="d-flex align-items-center gap-3">
+          <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir le menu latéral"><i class="bi bi-list" aria-hidden="true"></i></button>
+          <h1 id="form-title">Créer un événement</h1>
+        </div>
+        <a href="dashboard.html" class="btn btn-ef-outline btn-sm"><i class="bi bi-arrow-left me-1"></i> Retour</a>
+      </header>
+
+      <div class="dashboard-content">
+        <div class="event-form-card">
+          <form id="event-form">
+            <!-- Informations générales -->
+            <h4 class="form-section-title"><i class="bi bi-info-circle me-2"></i>Informations générales</h4>
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <label class="form-label" for="event-title">Titre *</label>
+                <input type="text" class="form-control" id="event-title" required placeholder="Nom de l'événement">
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="event-description">Description *</label>
+                <textarea class="form-control" id="event-description" rows="5" required placeholder="Décrivez votre événement..."></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="event-category">Catégorie *</label>
+                <select class="form-select" id="event-category" required></select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="event-status">Statut *</label>
+                <select class="form-select" id="event-status" required>
+                  <option value="draft">Brouillon (non publié)</option>
+                  <option value="published">Publié</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Date & Lieu -->
+            <h4 class="form-section-title"><i class="bi bi-calendar3 me-2"></i>Date & Lieu</h4>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label" for="event-date">Date *</label>
+                <input type="date" class="form-control" id="event-date" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="event-time">Heure *</label>
+                <input type="time" class="form-control" id="event-time" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="event-location">Lieu *</label>
+                <input type="text" class="form-control" id="event-location" required placeholder="Adresse ou nom du lieu">
+              </div>
+            </div>
+
+            <!-- Billetterie -->
+            <h4 class="form-section-title"><i class="bi bi-ticket-perforated me-2"></i>Billetterie</h4>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label" for="event-price">Prix (FCFA)</label>
+                <input type="number" class="form-control" id="event-price" min="0" value="0" placeholder="0 = Gratuit">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="event-capacity">Nombre de places *</label>
+                <input type="number" class="form-control" id="event-capacity" min="1" required placeholder="100">
+              </div>
+            </div>
+
+            <!-- Image -->
+            <h4 class="form-section-title"><i class="bi bi-image me-2"></i>Image (optionnel)</h4>
+            <div class="mb-4">
+              <label class="form-label" for="event-image">URL de l'image</label>
+              <input type="url" class="form-control" id="event-image" placeholder="https://example.com/image.jpg">
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-ef-primary btn-lg"><i class="bi bi-check-lg me-1"></i> Enregistrer</button>
+              <a href="dashboard.html" class="btn btn-ef-outline btn-lg">Annuler</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

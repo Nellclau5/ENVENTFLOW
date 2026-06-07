@@ -1,0 +1,246 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EventFlow">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+  <link href="css/pwa.css" rel="stylesheet">
+  <title>Dashboard — EventFlow Africa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/main.css" rel="stylesheet">
+  <link href="css/dashboard.css" rel="stylesheet">
+</head>
+<body class="dashboard-page" data-page="dashboard">
+
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar" id="dashboard-sidebar">
+      <a href="dashboard.html" class="sidebar-brand">
+        <img src="img/logo.png" alt="EventFlow Africa" class="ef-logo ef-logo-sidebar" width="200" height="42">
+      </a>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-title">Menu</div>
+        <a href="dashboard.html" class="sidebar-nav-item active" data-page="dashboard.html">
+          <i class="bi bi-grid"></i> Dashboard
+        </a>
+        <a href="create-event.html" class="sidebar-nav-item" data-page="create-event.html" data-organizer-only>
+          <i class="bi bi-plus-circle"></i> Créer un événement
+        </a>
+        <a href="dashboard.html#tickets" class="sidebar-nav-item" data-page="dashboard.html">
+          <i class="bi bi-ticket-perforated"></i> Mes billets
+        </a>
+        <a href="dashboard.html#profile" class="sidebar-nav-item" data-page="dashboard.html">
+          <i class="bi bi-person"></i> Mon profil
+        </a>
+
+        <div class="sidebar-section-title" data-organizer-only>Outils</div>
+        <a href="dashboard.html#scan" class="sidebar-nav-item" data-page="dashboard.html" data-organizer-only>
+          <i class="bi bi-qr-code-scan"></i> Scanner QR
+        </a>
+        <a href="events.html" class="sidebar-nav-item">
+          <i class="bi bi-calendar-event"></i> Voir le site
+        </a>
+        <button type="button" class="sidebar-nav-item" data-action="logout">
+          <i class="bi bi-box-arrow-left" aria-hidden="true"></i> Déconnexion
+        </button>
+      </nav>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main -->
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div class="d-flex align-items-center gap-3">
+          <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Ouvrir le menu latéral"><i class="bi bi-list" aria-hidden="true"></i></button>
+          <h1>Dashboard</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small d-none d-md-inline" data-user-email></span>
+          <div class="profile-avatar avatar-sm" data-user-initials></div>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Stats -->
+        <div class="row g-4 mb-4" id="stats-grid"></div>
+
+        <!-- Section Organisateur : Événements -->
+        <div class="dash-table-card mb-4" data-organizer-only>
+          <div class="dash-table-header">
+            <h3>Mes événements</h3>
+            <a href="create-event.html" class="btn btn-ef-primary btn-sm"><i class="bi bi-plus me-1"></i> Nouvel événement</a>
+          </div>
+          <div class="table-responsive-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Catégorie</th>
+                  <th>Date</th>
+                  <th>Billets</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="events-table-body">
+                <tr><td colspan="6" class="text-center text-muted py-4">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section Utilisateur : Billets -->
+        <div class="dash-table-card mb-4" id="tickets">
+          <div class="dash-table-header">
+            <h3>Mes billets</h3>
+          </div>
+          <div class="p-3" id="user-tickets-container"></div>
+        </div>
+
+        <!-- Historique achats -->
+        <div class="dash-table-card mb-4">
+          <div class="dash-table-header">
+            <h3>Historique des achats</h3>
+          </div>
+          <div class="table-responsive-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Événement</th>
+                  <th>Quantité</th>
+                  <th>Montant</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="purchase-history-body">
+                <tr><td colspan="4" class="text-center text-muted py-4">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Profil -->
+        <div class="dash-table-card mb-4" id="profile">
+          <div class="dash-table-header"><h3>Mon profil</h3></div>
+          <div class="p-4">
+            <div class="profile-header mb-0 border-0 p-0">
+              <div class="profile-avatar" data-user-initials></div>
+              <div>
+                <h4 data-user-name></h4>
+                <p class="text-muted mb-0" data-user-email></p>
+              </div>
+            </div>
+            <form id="profile-form" class="mt-4">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="profile-name">Nom complet</label>
+                  <input type="text" class="form-control" id="profile-name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="profile-email">Email</label>
+                  <input type="email" class="form-control" id="profile-email" disabled>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="profile-phone">Téléphone</label>
+                  <input type="tel" class="form-control" id="profile-phone" placeholder="+221 XX XXX XX XX">
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="profile-bio">Bio</label>
+                  <textarea class="form-control" id="profile-bio" rows="3" placeholder="Quelques mots sur vous..."></textarea>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-ef-primary">Enregistrer</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Scanner QR (organisateur) -->
+        <div class="dash-table-card mb-4" id="scan" data-organizer-only>
+          <div class="dash-table-header"><h3>Scanner QR Code</h3></div>
+          <div class="p-4">
+            <div class="scanner-container">
+              <p class="text-muted small mb-3">La caméra n'est activée que lorsque vous cliquez sur le bouton ci-dessous.</p>
+              <div class="d-flex gap-2 justify-content-center mb-3">
+                <button type="button" class="btn btn-ef-primary" id="start-scanner-btn">
+                  <i class="bi bi-camera-video me-1"></i> Activer la caméra
+                </button>
+                <button type="button" class="btn btn-ef-outline d-none" id="stop-scanner-btn">
+                  <i class="bi bi-camera-video-off me-1"></i> Arrêter
+                </button>
+              </div>
+              <div id="qr-reader"></div>
+              <form id="manual-scan-form" class="mt-4">
+                <p class="text-muted small">Ou saisissez le code manuellement :</p>
+                <div class="input-group">
+                  <label class="visually-hidden" for="manual-ticket-code">Code billet</label>
+                  <input type="text" class="form-control" id="manual-ticket-code" placeholder="EFA-XXXXXXXX">
+                  <button type="submit" class="btn btn-ef-primary">Vérifier</button>
+                </div>
+              </form>
+              <div id="scan-result" class="scan-result"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Participants -->
+  <div class="modal fade" id="participants-modal" tabindex="-1" aria-labelledby="participants-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="participants-modal-title">Participants</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <table class="dash-table">
+            <thead><tr><th>Nom</th><th>Email</th><th>Code</th><th>Statut</th></tr></thead>
+            <tbody id="participants-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Billet -->
+  <div class="modal fade" id="ticket-modal" tabindex="-1" aria-labelledby="ticket-modal-title" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="ticket-modal-title">Votre billet</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body" id="ticket-modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/vendor/qrcodejs.min.js"></script>
+  <script src="js/vendor/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/tickets.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

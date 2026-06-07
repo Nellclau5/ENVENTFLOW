@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EventFlow">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+  <link href="css/pwa.css" rel="stylesheet">
+  <title>Détail événement — EventFlow Africa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/main.css" rel="stylesheet">
+</head>
+<body class="public-page" data-page="event-details">
+
+  <nav class="navbar navbar-expand-lg navbar-dark ef-navbar">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <img src="img/logo.png" alt="EventFlow Africa" class="ef-logo ef-logo-nav" width="220" height="44">
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Ouvrir le menu de navigation"><span class="navbar-toggler-icon"></span></button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Accueil</a></li>
+          <li class="nav-item"><a class="nav-link" href="events.html">Événements</a></li>
+          <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+        </ul>
+        <div class="d-flex align-items-center" id="auth-links"></div>
+        <div id="user-menu" class="dropdown ms-3 d-none">
+          <button type="button" class="btn btn-ef-outline dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu utilisateur"><i class="bi bi-person-circle me-1" aria-hidden="true"></i> <span id="nav-user-name"></span></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" id="nav-dashboard-link" href="dashboard.html">Mon espace</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button type="button" class="dropdown-item" data-action="logout">Déconnexion</button></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div id="event-content">
+    <section class="event-detail-hero">
+      <div class="container">
+        <a href="events.html" class="text-white-50 small"><i class="bi bi-arrow-left me-1"></i> Retour aux événements</a>
+        <span class="badge bg-white text-dark ms-2" id="event-category">Catégorie</span>
+        <h1 class="hero-title mt-3" id="event-title">Chargement...</h1>
+        <div class="event-detail-meta">
+          <div class="event-detail-meta-item"><i class="bi bi-calendar3"></i> <span id="event-date"></span></div>
+          <div class="event-detail-meta-item"><i class="bi bi-geo-alt"></i> <span id="event-location"></span></div>
+          <div class="event-detail-meta-item"><i class="bi bi-person"></i> <span id="event-organizer"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-8">
+            <h3 class="mb-3">À propos</h3>
+            <p id="event-description" class="text-muted text-pre-line"></p>
+          </div>
+          <div class="col-lg-4">
+            <div class="ticket-card">
+              <h4 class="mb-3">Réserver</h4>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Prix</span>
+                <strong id="event-price">-</strong>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Places restantes</span>
+                <strong><span id="places-left">-</span> / <span id="event-capacity">-</span></strong>
+              </div>
+              <hr>
+              <button type="button" id="buy-ticket-btn" class="btn btn-ef-primary w-100 btn-lg">
+                <i class="bi bi-ticket-perforated me-1"></i> Acheter un billet
+              </button>
+              <p class="text-muted small text-center mt-3 mb-0">Billet avec QR Code et PDF inclus</p>
+            </div>
+
+            <!-- Billet acheté -->
+            <div id="ticket-success" class="mt-4 d-none">
+              <div id="purchased-ticket"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="ef-footer">
+    <div class="container"><div class="ef-footer-bottom mb-0 mt-0 pt-3"><p class="mb-0">&copy; 2026 EventFlow Africa</p></div></div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/vendor/qrcodejs.min.js"></script>
+  <script src="js/vendor/jspdf.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/tickets.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

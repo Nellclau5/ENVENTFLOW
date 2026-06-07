@@ -1,0 +1,77 @@
+/* =============================================
+   EventFlow Africa — Administration
+   ============================================= */
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.admin-chart-card {
+  background: var(--ef-white);
+  border-radius: var(--ef-radius);
+  padding: 1.5rem;
+  border: 1px solid var(--ef-gray-200);
+  height: 100%;
+}
+
+.admin-chart-placeholder {
+  height: 200px;
+  background: var(--ef-gray-100);
+  border-radius: var(--ef-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ef-gray-500);
+}
+
+.admin-tabs .nav-link {
+  color: var(--ef-gray-700);
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--ef-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.admin-tabs .nav-link.active {
+  background: linear-gradient(135deg, rgba(255, 184, 0, 0.12), rgba(255, 107, 0, 0.1));
+  color: var(--ef-primary);
+}
+
+.user-role-badge {
+  padding: 0.25rem 0.625rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.user-role-badge.admin { background: rgba(231, 76, 60, 0.15); color: var(--ef-danger); }
+.user-role-badge.organizer { background: rgba(13, 115, 119, 0.15); color: var(--ef-accent); }
+.user-role-badge.user { background: rgba(134, 142, 150, 0.15); color: var(--ef-gray-700); }
+
+.category-manager-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  background: var(--ef-gray-100);
+  border-radius: var(--ef-radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+.category-manager-item span {
+  font-weight: 600;
+  color: var(--ef-secondary);
+}
+
+.admin-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

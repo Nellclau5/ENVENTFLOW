@@ -1,0 +1,126 @@
+/* EventFlow Africa — PWA */
+
+.pwa-install-banner {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  width: min(480px, calc(100vw - 2rem));
+  background: var(--ef-white);
+  border: 1px solid var(--ef-gray-200);
+  border-radius: var(--ef-radius);
+  box-shadow: var(--ef-shadow-lg);
+  padding: 1rem;
+  animation: pwa-slide-up 0.35s ease;
+}
+
+.pwa-install-content {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.pwa-install-icon {
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.pwa-install-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--ef-secondary);
+}
+
+.pwa-install-text span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ef-gray-500);
+}
+
+.pwa-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.pwa-install-dismiss {
+  padding: 0.35rem 0.5rem;
+}
+
+.pwa-ios-hint {
+  position: fixed;
+  bottom: 5.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  width: min(360px, calc(100vw - 2rem));
+  background: var(--ef-secondary);
+  color: var(--ef-white);
+  border-radius: var(--ef-radius);
+  padding: 1rem 2.5rem 1rem 1rem;
+  font-size: 0.875rem;
+  box-shadow: var(--ef-shadow-lg);
+  animation: pwa-slide-up 0.35s ease;
+}
+
+.pwa-ios-hint-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--ef-white);
+  font-size: 1.25rem;
+  line-height: 1;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.pwa-standalone .ef-navbar {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.pwa-standalone body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.offline-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ef-light);
+}
+
+.offline-container {
+  padding: 2rem;
+}
+
+@keyframes pwa-slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .pwa-install-content {
+    flex-wrap: wrap;
+  }
+
+  .pwa-install-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
