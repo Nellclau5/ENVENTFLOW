@@ -3,7 +3,7 @@
  * Cache des ressources statiques + stratégie network-first pour les pages HTML
  */
 
-const CACHE_VERSION = 'eventflow-v2';
+const CACHE_VERSION = 'eventflow-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
