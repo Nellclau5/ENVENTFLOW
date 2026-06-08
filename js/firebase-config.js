@@ -53,7 +53,12 @@ const COLLECTIONS = {
   TICKET_TRANSFERS: 'ticketTransfers',
   WAITLIST: 'waitlist',
   ENTRY_LOGS: 'entryLogs',
-  EVENT_NOTIFICATIONS: 'eventNotifications'
+  EVENT_NOTIFICATIONS: 'eventNotifications',
+  DISPUTES: 'disputes',
+  REFUNDS: 'refunds',
+  REPORTS: 'reports',
+  PLATFORM_SETTINGS: 'platformSettings',
+  ADMIN_LOGS: 'adminLogs'
 };
 
 // Types de billets organisateur
@@ -86,8 +91,35 @@ const EVENT_STATUS = {
   REJECTED: 'rejected'
 };
 
-// Commission EventFlow (5 %)
+// Commission EventFlow par défaut (5 %) — surchargeable via platformSettings
 const COMMISSION_RATE = 0.05;
+
+const DISPUTE_STATUS = {
+  OPEN: 'open',
+  IN_PROGRESS: 'in_progress',
+  RESOLVED: 'resolved',
+  CLOSED: 'closed'
+};
+
+const REFUND_STATUS = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  COMPLETED: 'completed'
+};
+
+const REPORT_STATUS = {
+  OPEN: 'open',
+  REVIEWED: 'reviewed',
+  DISMISSED: 'dismissed',
+  ACTION_TAKEN: 'action_taken'
+};
+
+const REPORT_TYPES = {
+  EVENT: 'event',
+  USER: 'user',
+  FRAUD: 'fraud'
+};
 
 // Statuts billet
 const TICKET_STATUS = {

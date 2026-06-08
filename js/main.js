@@ -301,6 +301,23 @@ const App = {
 
 
 
+      document.getElementById('report-event-btn')?.addEventListener('click', async () => {
+        if (!AuthService.currentUser) {
+          window.location.href = `login.html?redirect=event-details.html?id=${eventId}`;
+          return;
+        }
+        const reason = prompt('Motif du signalement (fraude, contenu inapproprié, arnaque…) :');
+        if (!reason) return;
+        const description = prompt('Détails supplémentaires (optionnel) :') || '';
+        await SupportService.submitReport({
+          type: REPORT_TYPES.EVENT,
+          targetId: eventId,
+          targetLabel: event.title,
+          reason,
+          description
+        });
+      });
+
       document.getElementById('buy-ticket-btn')?.addEventListener('click', async () => {
 
         const qty = parseInt(document.getElementById('ticket-quantity')?.value) || 1;

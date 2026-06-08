@@ -66,5 +66,47 @@ const SupportService = {
       .get();
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  },
+
+  async submitReport(data) {
+    if (!AuthService.currentUser) {
+      window.location.href = `login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      return;
+    }
+    await db.collection(COLLECTIONS.REPORTS).add({
+      reporterId: AuthService.currentUser.uid,
+      reporterName: AuthService.userData?.displayName || AuthService.currentUser.email,
+      type: data.type || REPORT_TYPES.EVENT,
+      targetId: data.targetId,
+      targetLabel: data.targetLabel || '',
+      reason: data.reason,
+      description: data.description || '',
+      status: REPORT_STATUS.OPEN,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    Utils.showToast('Signalement envoyé. Notre équipe va l\'examiner.');
+  },
+
+  async submitDispute(data) {
+    if (!AuthService.currentUser) {
+      window.location.href = 'login.html';
+      return;
+    }
+    await db.collection(COLLECTIONS.DISPUTES).add({
+      userId: AuthService.currentUser.uid,
+      userName: AuthService.userData?.displayName || AuthService.currentUser.email,
+      userEmail: AuthService.currentUser.email,
+      eventId: data.eventId || null,
+      eventTitle: data.eventTitle || '',
+      ticketId: data.ticketId || null,
+      purchaseId: data.purchaseId || null,
+      subject: data.subject,
+      description: data.description,
+      amount: data.amount || 0,
+      status: DISPUTE_STATUS.OPEN,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    Utils.showToast('Litige ouvert. Un administrateur vous contactera.');
   }
 };

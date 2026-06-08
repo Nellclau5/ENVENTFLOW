@@ -180,6 +180,48 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid || isAdmin()
       );
+      allow update, delete: if isAdmin();
+    }
+
+    // Litiges
+    match /disputes/{disputeId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'open';
+      allow update, delete: if isAdmin();
+    }
+
+    // Remboursements
+    match /refunds/{refundId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Signalements
+    match /reports/{reportId} {
+      allow read: if isAdmin() ||
+        (isSignedIn() && resource.data.reporterId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.reporterId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Paramètres plateforme (commissions, etc.)
+    match /platformSettings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Journal actions admin
+    match /adminLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
     }
   }
 }

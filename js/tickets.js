@@ -27,6 +27,10 @@ const TicketService = {
       window.location.href = `login.html?redirect=event-details.html?id=${eventId}`;
       return;
     }
+    if (!AuthService.isAccountActive()) {
+      Utils.showToast('Votre compte est suspendu ou en attente de validation.', 'error');
+      return;
+    }
 
     Utils.showLoading(true);
     try {
@@ -62,7 +66,18 @@ const TicketService = {
       if (promoResult.error) throw new Error(promoResult.error);
       unitPrice = promoResult.price;
       const totalPrice = unitPrice * quantity;
-      const commissionAmount = Math.round(totalPrice * COMMISSION_RATE);
+      let rate = COMMISSION_RATE;
+      if (typeof AdminPlatformService !== 'undefined') {
+        rate = await AdminPlatformService.getCommissionRate();
+      } else {
+        try {
+          const settings = await db.collection(COLLECTIONS.PLATFORM_SETTINGS).doc('main').get();
+          if (settings.exists && typeof settings.data().commissionRate === 'number') {
+            rate = settings.data().commissionRate;
+          }
+        } catch (_) { /* défaut */ }
+      }
+      const commissionAmount = Math.round(totalPrice * rate);
 
       const batch = db.batch();
 

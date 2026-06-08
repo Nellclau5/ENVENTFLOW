@@ -78,6 +78,14 @@ const AuthService = {
     Utils.showLoading(true);
     try {
       const credential = await auth.signInWithEmailAndPassword(email, password);
+      this.userData = await this.getUserData(credential.user.uid);
+      if (!this.hasRole(ROLES.ADMIN) && this.userData?.accountStatus === ACCOUNT_STATUS.SUSPENDED) {
+        await auth.signOut();
+        this.currentUser = null;
+        this.userData = null;
+        Utils.showToast('Votre compte est suspendu. Contactez le support.', 'error');
+        throw new Error('account-suspended');
+      }
       Utils.showToast('Connexion réussie !');
       return credential.user;
     } catch (error) {
@@ -208,6 +216,13 @@ const AuthService = {
         } else {
           this.currentUser = user;
           this.userData = await this.getUserData(user.uid);
+          if (!this.hasRole(ROLES.ADMIN) && this.userData?.accountStatus === ACCOUNT_STATUS.SUSPENDED) {
+            Utils.showToast('Votre compte est suspendu.', 'error');
+            await auth.signOut();
+            window.location.href = 'login.html';
+            reject('Compte suspendu');
+            return;
+          }
           resolve(user);
         }
       });

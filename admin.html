@@ -33,6 +33,9 @@
         <a href="admin.html?tab=users" class="sidebar-nav-item"><i class="bi bi-people"></i> Utilisateurs</a>
         <a href="admin.html?tab=events" class="sidebar-nav-item"><i class="bi bi-calendar-event"></i> Événements</a>
         <a href="admin.html?tab=moderation" class="sidebar-nav-item"><i class="bi bi-shield-check"></i> Modération</a>
+        <a href="admin.html?tab=trust" class="sidebar-nav-item"><i class="bi bi-exclamation-triangle"></i> Litiges & signalements</a>
+        <a href="admin.html?tab=finances" class="sidebar-nav-item"><i class="bi bi-cash-stack"></i> Commissions</a>
+        <a href="admin.html?tab=support" class="sidebar-nav-item"><i class="bi bi-headset"></i> Support</a>
         <a href="admin.html?tab=categories" class="sidebar-nav-item"><i class="bi bi-tags"></i> Catégories</a>
         <div class="sidebar-section-title">Navigation</div>
         <a href="scan.html" class="sidebar-nav-item" data-page="scan.html"><i class="bi bi-qr-code-scan"></i> Scanner QR</a>
@@ -59,6 +62,9 @@
           <button type="button" class="nav-link" id="tab-users-btn" data-bs-toggle="tab" data-bs-target="#tab-users" role="tab" aria-selected="false" aria-controls="tab-users" tabindex="-1">Utilisateurs</button>
           <button type="button" class="nav-link" id="tab-events-btn" data-bs-toggle="tab" data-bs-target="#tab-events" role="tab" aria-selected="false" aria-controls="tab-events" tabindex="-1">Événements</button>
           <button type="button" class="nav-link" id="tab-moderation-btn" data-bs-toggle="tab" data-bs-target="#tab-moderation" role="tab" aria-selected="false" aria-controls="tab-moderation" tabindex="-1">Modération</button>
+          <button type="button" class="nav-link" id="tab-trust-btn" data-bs-toggle="tab" data-bs-target="#tab-trust" role="tab" aria-selected="false" aria-controls="tab-trust" tabindex="-1">Litiges</button>
+          <button type="button" class="nav-link" id="tab-finances-btn" data-bs-toggle="tab" data-bs-target="#tab-finances" role="tab" aria-selected="false" aria-controls="tab-finances" tabindex="-1">Commissions</button>
+          <button type="button" class="nav-link" id="tab-support-btn" data-bs-toggle="tab" data-bs-target="#tab-support" role="tab" aria-selected="false" aria-controls="tab-support" tabindex="-1">Support</button>
           <button type="button" class="nav-link" id="tab-categories-btn" data-bs-toggle="tab" data-bs-target="#tab-categories" role="tab" aria-selected="false" aria-controls="tab-categories" tabindex="-1">Catégories</button>
         </nav>
 
@@ -84,8 +90,9 @@
                   <h5 class="mb-3">Actions rapides</h5>
                   <div class="admin-quick-actions">
                     <button type="button" class="btn btn-ef-primary" data-bs-toggle="tab" data-bs-target="#tab-moderation"><i class="bi bi-shield-check me-1"></i> Modération</button>
+                    <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-trust"><i class="bi bi-flag me-1"></i> Litiges</button>
                     <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-users">Gérer utilisateurs</button>
-                    <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-categories">Gérer catégories</button>
+                    <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-finances">Commissions</button>
                   </div>
                 </div>
               </div>
@@ -125,6 +132,10 @@
           <!-- Modération -->
           <div class="tab-pane fade" id="tab-moderation" role="tabpanel" aria-labelledby="tab-moderation-btn" tabindex="0">
             <div class="dash-table-card p-4 mb-4">
+              <h3 class="mb-3"><i class="bi bi-person-badge me-2"></i>Organisateurs à valider</h3>
+              <div id="organizer-queue"></div>
+            </div>
+            <div class="dash-table-card p-4 mb-4">
               <h3 class="mb-3">File d'attente — Événements à valider</h3>
               <div id="moderation-queue"></div>
             </div>
@@ -132,9 +143,92 @@
               <h5 class="mb-2">Règles de modération</h5>
               <ul class="text-muted small mb-0">
                 <li>Les organisateurs soumettent en statut « En attente » — vous approuvez ou rejetez.</li>
-                <li>Les nouveaux comptes organisateurs nécessitent une approbation dans l'onglet Utilisateurs.</li>
+                <li>Les comptes frauduleux peuvent être suspendus depuis l'onglet Utilisateurs.</li>
                 <li>Les événements « En vedette » apparaissent en priorité sur la page d'accueil.</li>
               </ul>
+            </div>
+          </div>
+
+          <!-- Litiges, remboursements, signalements -->
+          <div class="tab-pane fade" id="tab-trust" role="tabpanel" aria-labelledby="tab-trust-btn" tabindex="0">
+            <div class="dash-table-card p-4 mb-4">
+              <h3 class="mb-3"><i class="bi bi-chat-left-text me-2"></i>Litiges</h3>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>Sujet</th><th>Utilisateur</th><th>Événement</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead>
+                  <tbody id="admin-disputes-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="dash-table-card p-4 mb-4">
+              <h3 class="mb-3"><i class="bi bi-arrow-counterclockwise me-2"></i>Remboursements</h3>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>Utilisateur</th><th>Événement</th><th>Montant</th><th>Motif</th><th>Statut</th><th>Actions</th></tr></thead>
+                  <tbody id="admin-refunds-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="dash-table-card p-4">
+              <h3 class="mb-3"><i class="bi bi-flag me-2"></i>Signalements</h3>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>Type</th><th>Cible</th><th>Motif</th><th>Signaleur</th><th>Statut</th><th>Actions</th></tr></thead>
+                  <tbody id="admin-reports-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commissions & rôles -->
+          <div class="tab-pane fade" id="tab-finances" role="tabpanel" aria-labelledby="tab-finances-btn" tabindex="0">
+            <div class="row g-4 mb-4">
+              <div class="col-lg-5">
+                <div class="dash-table-card p-4">
+                  <h5 class="mb-3">Taux de commission global</h5>
+                  <form id="commission-form" class="d-flex gap-2 align-items-end">
+                    <div class="flex-grow-1">
+                      <label class="form-label" for="commission-rate">Pourcentage (%)</label>
+                      <input type="number" class="form-control" id="commission-rate" min="0" max="50" step="0.5" required>
+                    </div>
+                    <button type="submit" class="btn btn-ef-primary">Enregistrer</button>
+                  </form>
+                  <p class="text-muted small mt-2 mb-0">Appliqué aux nouveaux achats. Les ventes passées conservent leur commission d'origine.</p>
+                </div>
+              </div>
+              <div class="col-lg-7">
+                <div class="dash-table-card p-4">
+                  <h5 class="mb-3">Permissions & rôles</h5>
+                  <ul class="text-muted small mb-0">
+                    <li><strong>Admin</strong> — accès complet, modération, commissions, litiges.</li>
+                    <li><strong>Organizer</strong> — création d'événements (après validation admin).</li>
+                    <li><strong>Controller</strong> — scan QR jour J uniquement.</li>
+                    <li><strong>User</strong> — achat de billets, favoris, alertes.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="dash-table-card p-4">
+              <h3 class="mb-3">Commissions par organisateur</h3>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>Organisateur</th><th>Email</th><th>Événements</th><th>Revenus</th><th>Commission EventFlow</th></tr></thead>
+                  <tbody id="admin-commission-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Support -->
+          <div class="tab-pane fade" id="tab-support" role="tabpanel" aria-labelledby="tab-support-btn" tabindex="0">
+            <div class="dash-table-card p-4">
+              <h3 class="mb-3"><i class="bi bi-headset me-2"></i>Tickets support</h3>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>Sujet</th><th>Contact</th><th>Message</th><th>Statut</th><th>Actions</th></tr></thead>
+                  <tbody id="admin-support-body"></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -176,6 +270,7 @@
   <script src="js/events.js"></script>
   <script src="js/tickets.js"></script>
   <script src="js/dashboard.js"></script>
+  <script src="js/admin-platform.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/pwa.js"></script>
 </body>

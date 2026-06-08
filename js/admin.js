@@ -19,20 +19,20 @@ const AdminService = {
 
 
     await seedDefaultCategories();
-
-
+    await AdminPlatformService.init();
 
     const tab = Utils.getUrlParam('tab') || 'overview';
 
     await this.loadOverview();
-
     await this.loadUsers();
-
     await this.loadEvents();
-
     await this.loadModerationQueue();
-
+    await this.loadOrganizerQueue();
+    await this.loadTrustTab();
+    await this.loadFinancesTab();
+    await this.loadSupportTab();
     await this.loadCategories();
+    this.bindCommissionForm();
 
 
 
@@ -45,121 +45,57 @@ const AdminService = {
 
 
   async loadOverview() {
-
-    const [usersSnap, eventsSnap, ticketsSnap, purchasesSnap] = await Promise.all([
-
-      db.collection(COLLECTIONS.USERS).get(),
-
-      db.collection(COLLECTIONS.EVENTS).get(),
-
-      db.collection(COLLECTIONS.TICKETS).get(),
-
-      db.collection(COLLECTIONS.PURCHASES).get()
-
-    ]);
-
-
-
-    const users = usersSnap.docs.map(d => d.data());
-
+    const stats = await AdminPlatformService.getGlobalStats();
+    const eventsSnap = await db.collection(COLLECTIONS.EVENTS).get();
     const events = eventsSnap.docs.map(d => d.data());
-
-    const purchases = purchasesSnap.docs.map(d => d.data());
-
-
-
-    const totalRevenue = events.reduce((s, e) => s + (e.revenue || 0), 0);
-
-    const totalCommissions = events.reduce((s, e) => s + (e.commissionTotal || 0), 0)
-
-      || purchases.reduce((s, p) => s + (p.commissionAmount || 0), 0);
-
-    const publishedEvents = events.filter(e => e.status === EVENT_STATUS.PUBLISHED).length;
-
-    const pendingEvents = events.filter(e => e.status === EVENT_STATUS.PENDING).length;
-
-    const organizers = users.filter(u => u.role === ROLES.ORGANIZER).length;
-
-    const pendingOrganizers = users.filter(u =>
-
-      u.role === ROLES.ORGANIZER && u.accountStatus === ACCOUNT_STATUS.PENDING
-
-    ).length;
-
-
+    const ratePct = Math.round(stats.commissionRate * 100);
 
     document.getElementById('admin-stats').innerHTML = `
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon primary"><i class="bi bi-people"></i></div>
-
-        <div class="dash-stat-value">${users.length}</div>
-
-        <div class="dash-stat-label">Utilisateurs</div>
-
+        <div class="dash-stat-value">${stats.users}</div>
+        <div class="dash-stat-label">Utilisateurs (${stats.suspendedUsers} suspendus)</div>
       </div>
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon success"><i class="bi bi-calendar-event"></i></div>
-
-        <div class="dash-stat-value">${events.length}</div>
-
-        <div class="dash-stat-label">Événements (${publishedEvents} publiés)</div>
-
+        <div class="dash-stat-value">${stats.events}</div>
+        <div class="dash-stat-label">Événements (${stats.publishedEvents} publiés)</div>
       </div>
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
-
-        <div class="dash-stat-value">${pendingEvents}</div>
-
-        <div class="dash-stat-label">En attente validation</div>
-
+        <div class="dash-stat-value">${stats.pendingEvents}</div>
+        <div class="dash-stat-label">Événements en attente</div>
       </div>
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon info"><i class="bi bi-ticket-perforated"></i></div>
-
-        <div class="dash-stat-value">${ticketsSnap.size}</div>
-
+        <div class="dash-stat-value">${stats.ticketsSold}</div>
         <div class="dash-stat-label">Billets vendus</div>
-
       </div>
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon warning"><i class="bi bi-currency-exchange"></i></div>
-
-        <div class="dash-stat-value">${Utils.formatPrice(totalRevenue)}</div>
-
+        <div class="dash-stat-value">${Utils.formatPrice(stats.totalRevenue)}</div>
         <div class="dash-stat-label">Revenus globaux</div>
-
       </div>
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon primary"><i class="bi bi-percent"></i></div>
-
-        <div class="dash-stat-value">${Utils.formatPrice(totalCommissions)}</div>
-
-        <div class="dash-stat-label">Commissions (${Math.round(COMMISSION_RATE * 100)}%)</div>
-
+        <div class="dash-stat-value">${Utils.formatPrice(stats.totalCommissions)}</div>
+        <div class="dash-stat-label">Commissions (${ratePct}%)</div>
       </div>
-
       <div class="dash-stat-card">
-
         <div class="dash-stat-icon primary"><i class="bi bi-person-badge"></i></div>
-
-        <div class="dash-stat-value">${organizers}</div>
-
-        <div class="dash-stat-label">Organisateurs (${pendingOrganizers} en attente)</div>
-
+        <div class="dash-stat-value">${stats.organizers}</div>
+        <div class="dash-stat-label">Organisateurs (${stats.pendingOrganizers} en attente)</div>
       </div>
-
+      <div class="dash-stat-card">
+        <div class="dash-stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
+        <div class="dash-stat-value">${stats.openDisputes + stats.openReports}</div>
+        <div class="dash-stat-label">Litiges & signalements ouverts</div>
+      </div>
+      <div class="dash-stat-card">
+        <div class="dash-stat-icon info"><i class="bi bi-qr-code-scan"></i></div>
+        <div class="dash-stat-value">${stats.scansToday}</div>
+        <div class="dash-stat-label">Scans aujourd'hui</div>
+      </div>
     `;
 
 
@@ -210,18 +146,14 @@ const AdminService = {
 
     if (financeEl) {
 
-      const netOrganizers = totalRevenue - totalCommissions;
+      const netOrganizers = stats.totalRevenue - stats.totalCommissions;
 
       financeEl.innerHTML = `
-
-        <div class="finance-row"><span>Volume total des ventes</span><strong>${Utils.formatPrice(totalRevenue)}</strong></div>
-
-        <div class="finance-row"><span>Commissions EventFlow (${Math.round(COMMISSION_RATE * 100)}%)</span><strong class="text-primary">${Utils.formatPrice(totalCommissions)}</strong></div>
-
+        <div class="finance-row"><span>Volume total des ventes</span><strong>${Utils.formatPrice(stats.totalRevenue)}</strong></div>
+        <div class="finance-row"><span>Commissions EventFlow (${ratePct}%)</span><strong class="text-primary">${Utils.formatPrice(stats.totalCommissions)}</strong></div>
         <div class="finance-row"><span>Reversé aux organisateurs (estimé)</span><strong>${Utils.formatPrice(netOrganizers)}</strong></div>
-
+        <div class="finance-row"><span>Remboursements en attente</span><strong class="text-warning">${stats.pendingRefunds}</strong></div>
         <p class="text-muted small mt-3 mb-0">Les commissions sont calculées automatiquement à chaque achat de billet.</p>
-
       `;
 
     }
@@ -323,8 +255,21 @@ const AdminService = {
 
 
   async changeUserRole(userId, newRole) {
-
     try {
+      if (userId === AuthService.currentUser?.uid && newRole !== ROLES.ADMIN) {
+        Utils.showToast('Vous ne pouvez pas retirer votre propre rôle admin.', 'error');
+        await this.loadUsers();
+        return;
+      }
+      if (newRole !== ROLES.ADMIN) {
+        const admins = await db.collection(COLLECTIONS.USERS).where('role', '==', ROLES.ADMIN).get();
+        const target = await db.collection(COLLECTIONS.USERS).doc(userId).get();
+        if (target.data()?.role === ROLES.ADMIN && admins.size <= 1) {
+          Utils.showToast('Impossible : dernier administrateur.', 'error');
+          await this.loadUsers();
+          return;
+        }
+      }
 
       const updates = { role: newRole, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
 
@@ -341,6 +286,7 @@ const AdminService = {
       }
 
       await db.collection(COLLECTIONS.USERS).doc(userId).update(updates);
+      await AdminPlatformService.logAction('role_change', userId, { newRole });
 
       Utils.showToast('Rôle mis à jour.');
 
@@ -371,9 +317,10 @@ const AdminService = {
       });
 
       Utils.showToast('Organisateur approuvé.');
+      await AdminPlatformService.logAction('organizer_approve', userId, {});
 
       await this.loadUsers();
-
+      await this.loadOrganizerQueue();
       await this.loadOverview();
 
     } catch (error) {
@@ -387,18 +334,16 @@ const AdminService = {
 
 
   async suspendUser(userId) {
-
-    if (!confirm('Suspendre ce compte ?')) return;
+    const reason = prompt('Motif de suspension (fraude, abus, etc.) :') || 'Compte suspendu par admin';
+    if (!reason) return;
 
     try {
-
       await db.collection(COLLECTIONS.USERS).doc(userId).update({
-
         accountStatus: ACCOUNT_STATUS.SUSPENDED,
-
+        suspendedReason: reason,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
       });
+      await AdminPlatformService.logAction('account_suspend', userId, { reason });
 
       Utils.showToast('Compte suspendu.');
 
@@ -485,13 +430,10 @@ const AdminService = {
               : ''}
 
             ${event.status === EVENT_STATUS.PUBLISHED
-
               ? `<button class="btn btn-sm ${event.featured ? 'btn-warning' : 'btn-ef-outline'}" onclick="AdminService.toggleFeatured('${event.id}', ${!event.featured})" title="En vedette">
-
                    <i class="bi bi-star${event.featured ? '-fill' : ''}"></i>
-
-                 </button>`
-
+                 </button>
+                 <button class="btn btn-sm btn-outline-warning" onclick="AdminService.unpublishEvent('${event.id}')" title="Dépublier"><i class="bi bi-eye-slash"></i></button>`
               : ''}
 
             <button class="btn-action delete" onclick="AdminService.deleteEvent('${event.id}')"><i class="bi bi-trash"></i></button>
@@ -714,6 +656,70 @@ const AdminService = {
 
     await this.loadCategories();
 
+  },
+
+  async loadOrganizerQueue() {
+    const organizers = await AdminPlatformService.getPendingOrganizers();
+    AdminPlatformService.renderOrganizerQueue(organizers, 'organizer-queue');
+  },
+
+  async loadTrustTab() {
+    const [disputes, refunds, reports] = await Promise.all([
+      AdminPlatformService.getDisputes(),
+      AdminPlatformService.getRefunds(),
+      AdminPlatformService.getReports()
+    ]);
+    AdminPlatformService.renderDisputes(disputes, 'admin-disputes-body');
+    AdminPlatformService.renderRefunds(refunds, 'admin-refunds-body');
+    AdminPlatformService.renderReports(reports, 'admin-reports-body');
+  },
+
+  async loadFinancesTab() {
+    const rate = AdminPlatformService.getCommissionRateSync();
+    const input = document.getElementById('commission-rate');
+    if (input) input.value = (rate * 100).toFixed(1);
+    const rows = await AdminPlatformService.getOrganizerCommissionReport();
+    AdminPlatformService.renderCommissionReport(rows, 'admin-commission-body');
+  },
+
+  async loadSupportTab() {
+    const tickets = await AdminPlatformService.getSupportTickets();
+    AdminPlatformService.renderSupportTickets(tickets, 'admin-support-body');
+  },
+
+  bindCommissionForm() {
+    const form = document.getElementById('commission-form');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await AdminPlatformService.setCommissionRate(document.getElementById('commission-rate').value);
+        await this.loadOverview();
+        await this.loadFinancesTab();
+      } catch (err) {
+        Utils.showToast(err.message || 'Erreur.', 'error');
+      }
+    });
+  },
+
+  async unpublishEvent(eventId) {
+    const reason = prompt('Motif de dépublication :') || 'Retiré par modération admin';
+    if (!confirm('Dépublier cet événement ?')) return;
+    try {
+      await db.collection(COLLECTIONS.EVENTS).doc(eventId).update({
+        status: EVENT_STATUS.REJECTED,
+        rejectionReason: reason,
+        featured: false,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await AdminPlatformService.logAction('event_unpublish', eventId, { reason });
+      Utils.showToast('Événement dépublié.');
+      await this.loadEvents();
+      await this.loadOverview();
+    } catch (error) {
+      Utils.showToast('Erreur.', 'error');
+    }
   }
 
 };
