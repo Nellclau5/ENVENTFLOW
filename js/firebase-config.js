@@ -25,7 +25,7 @@ const firebaseConfig = {
  * Générez ou copiez la paire de clés, puis collez la clé publique ici.
  * Sans cette clé, les notifications locales fonctionnent ; le push serveur FCM nécessite la clé.
  */
-const FCM_VAPID_KEY = '';
+const FCM_VAPID_KEY = 'BCNJSBGJbOjaHtefVoQDyyICywUWYKBGS1vUuE_GJ67xKK1z6NYC0Qv4WNw_xQQhS69vw-rxNwkOUMRlRovPEbw';
 
 // Initialisation Firebase
 firebase.initializeApp(firebaseConfig);
