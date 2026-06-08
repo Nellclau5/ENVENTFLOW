@@ -28,6 +28,11 @@ service cloud.firestore {
       return isAdmin() || isOrganizer() || isController();
     }
 
+    function isEventOrganizer(eventId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid;
+    }
+
     function accountIsActive() {
       return !('accountStatus' in userDoc()) || userDoc().accountStatus == 'active';
     }
@@ -102,9 +107,46 @@ service cloud.firestore {
     match /purchases/{purchaseId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isAdmin()
+        isAdmin() ||
+        (isOrganizer() && isEventOrganizer(resource.data.eventId))
       );
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Liste d'attente
+    match /waitlist/{entryId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin() ||
+        (isOrganizer() && isEventOrganizer(resource.data.eventId))
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (
+        isAdmin() ||
+        (isOrganizer() && isEventOrganizer(resource.data.eventId))
+      );
+    }
+
+    // Logs d'entrée (scan)
+    match /entryLogs/{logId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        (isOrganizer() && isEventOrganizer(resource.data.eventId))
+      );
+      allow create: if isSignedIn() && isStaff();
+    }
+
+    // Notifications organisateur (email/SMS/push simulés)
+    match /eventNotifications/{notifId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        (isOrganizer() && isEventOrganizer(resource.data.eventId))
+      );
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        (isOrganizer() && isEventOrganizer(request.resource.data.eventId))
+      );
     }
 
     // Favoris

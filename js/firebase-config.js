@@ -50,7 +50,17 @@ const COLLECTIONS = {
   FAVORITES: 'favorites',
   EVENT_ALERTS: 'eventAlerts',
   SUPPORT_TICKETS: 'supportTickets',
-  TICKET_TRANSFERS: 'ticketTransfers'
+  TICKET_TRANSFERS: 'ticketTransfers',
+  WAITLIST: 'waitlist',
+  ENTRY_LOGS: 'entryLogs',
+  EVENT_NOTIFICATIONS: 'eventNotifications'
+};
+
+// Types de billets organisateur
+const TICKET_KINDS = {
+  STANDARD: 'standard',
+  VIP: 'vip',
+  EARLY_BIRD: 'early_bird'
 };
 
 // Rôles utilisateur

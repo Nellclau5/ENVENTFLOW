@@ -83,6 +83,17 @@
         <!-- Stats -->
         <div class="row g-4 mb-4" id="stats-grid"></div>
 
+        <!-- Ventes temps réel -->
+        <div class="dash-table-card mb-4" data-organizer-only>
+          <div class="dash-table-header">
+            <h3><i class="bi bi-graph-up-arrow me-2"></i>Ventes en temps réel</h3>
+            <button type="button" class="btn btn-ef-outline btn-sm" onclick="DashboardService.exportSalesCSV()">
+              <i class="bi bi-download me-1"></i> Export CSV
+            </button>
+          </div>
+          <div id="sales-live-list"></div>
+        </div>
+
         <!-- Section Organisateur : Événements -->
         <div class="dash-table-card mb-4" data-organizer-only>
           <div class="dash-table-header">
@@ -279,10 +290,13 @@
 
         <!-- Scanner QR (organisateur) -->
         <div class="dash-table-card mb-4" id="scan" data-organizer-only>
-          <div class="dash-table-header"><h3>Scanner QR Code</h3></div>
+          <div class="dash-table-header">
+            <h3><i class="bi bi-qr-code-scan me-2"></i>Mode staff — Scanner QR</h3>
+            <a href="scan.html" class="btn btn-ef-outline btn-sm">Plein écran</a>
+          </div>
           <div class="p-4">
             <div class="scanner-container">
-              <p class="text-muted small mb-3">La caméra n'est activée que lorsque vous cliquez sur le bouton ci-dessous.</p>
+              <p class="text-muted small mb-3">Scan jour J avec logs d'entrée. Fonctionne hors ligne (synchronisation auto).</p>
               <div class="d-flex gap-2 justify-content-center mb-3">
                 <button type="button" class="btn btn-ef-primary" id="start-scanner-btn">
                   <i class="bi bi-camera-video me-1"></i> Activer la caméra
@@ -310,17 +324,54 @@
 
   <!-- Modal Participants -->
   <div class="modal fade" id="participants-modal" tabindex="-1" aria-labelledby="participants-modal-title" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="participants-modal-title">Participants</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
         </div>
         <div class="modal-body">
-          <table class="dash-table">
-            <thead><tr><th>Nom</th><th>Email</th><th>Code</th><th>Statut</th></tr></thead>
-            <tbody id="participants-table-body"></tbody>
-          </table>
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-participants" type="button">Participants</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-waitlist" type="button">Liste d'attente</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-logs" type="button">Logs d'entrée</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-notify" type="button">Notifications</button></li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-participants">
+              <div class="d-flex gap-2 mb-3">
+                <button type="button" class="btn btn-ef-outline btn-sm" onclick="DashboardService.exportParticipantsCSV()"><i class="bi bi-filetype-csv me-1"></i> CSV</button>
+                <button type="button" class="btn btn-ef-outline btn-sm" onclick="DashboardService.exportParticipantsPDF()"><i class="bi bi-filetype-pdf me-1"></i> PDF</button>
+              </div>
+              <div class="table-responsive-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>Nom</th><th>Email</th><th>Type</th><th>Code</th><th>Montant</th><th>Statut</th></tr></thead>
+                  <tbody id="participants-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tab-waitlist">
+              <table class="dash-table">
+                <thead><tr><th>Nom</th><th>Email</th><th>Qté</th><th>Date inscription</th></tr></thead>
+                <tbody id="waitlist-table-body"></tbody>
+              </table>
+            </div>
+            <div class="tab-pane fade" id="tab-logs">
+              <table class="dash-table">
+                <thead><tr><th>Participant</th><th>Code</th><th>Scanné par</th><th>Méthode</th><th>Date</th></tr></thead>
+                <tbody id="entry-logs-table-body"></tbody>
+              </table>
+            </div>
+            <div class="tab-pane fade" id="tab-notify">
+              <p class="text-muted small">Envoi simulé (file d'attente Firestore). Intégration email/SMS réelle à brancher.</p>
+              <textarea id="notify-message" class="form-control mb-3" rows="3" placeholder="Message aux participants..."></textarea>
+              <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-ef-primary btn-sm" onclick="DashboardService.sendParticipantNotification('email')"><i class="bi bi-envelope me-1"></i> Email</button>
+                <button type="button" class="btn btn-ef-outline btn-sm" onclick="DashboardService.sendParticipantNotification('sms')"><i class="bi bi-phone me-1"></i> SMS</button>
+                <button type="button" class="btn btn-ef-outline btn-sm" onclick="DashboardService.sendParticipantNotification('push')"><i class="bi bi-bell me-1"></i> Push</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -375,6 +426,7 @@
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/events.js"></script>
+  <script src="js/organizer.js"></script>
   <script src="js/tickets.js"></script>
   <script src="js/favorites.js"></script>
   <script src="js/notifications.js"></script>

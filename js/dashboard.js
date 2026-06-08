@@ -117,6 +117,12 @@ const DashboardService = {
       const events = await EventService.getOrganizerEvents(userId);
       this.renderEventsTable(events, 'events-table-body');
       this.subscribeOrganizerRealtime(userId);
+      OrganizerService.renderSalesLive(events, 'sales-live-list');
+      if (this._salesUnsub) this._salesUnsub();
+      this._salesUnsub = OrganizerService.subscribeOrganizerSales(userId, (evts) => {
+        OrganizerService.renderSalesLive(evts, 'sales-live-list');
+      });
+      OrganizerService.syncOfflineQueue();
     } else {
       this.renderUserDashboardStats(tickets, purchases);
     }
@@ -281,7 +287,7 @@ const DashboardService = {
         <td>${event.category || '-'}</td>
         <td>${Utils.formatDate(event.date)}</td>
         <td>${event.soldTickets || 0} / ${event.capacity}</td>
-        <td><span class="${EventService.getStatusBadgeClass(event.status)}">${EventService.getStatusLabel(event.status)}</span></td>
+        <td><span class="${EventService.getStatusBadgeClass(event.status)}">${EventService.getStatusLabel(event.status, event)}</span></td>
         <td>
           <div class="d-flex gap-1">
             <a href="create-event.html?id=${event.id}" class="btn-action edit" title="Modifier">
@@ -289,6 +295,9 @@ const DashboardService = {
             </a>
             <button class="btn-action view" title="Participants" onclick="DashboardService.showParticipants('${event.id}')">
               <i class="bi bi-people"></i>
+            </button>
+            <button class="btn-action edit" title="Dupliquer" onclick="DashboardService.duplicateEvent('${event.id}')">
+              <i class="bi bi-copy"></i>
             </button>
             <button class="btn-action delete" title="Supprimer" onclick="DashboardService.deleteEvent('${event.id}')">
               <i class="bi bi-trash"></i>
@@ -299,24 +308,77 @@ const DashboardService = {
     `).join('');
   },
 
+  _currentParticipantsEventId: null,
+
   async showParticipants(eventId) {
-    const participants = await TicketService.getEventParticipants(eventId);
+    this._currentParticipantsEventId = eventId;
+    const event = await EventService.getEvent(eventId);
+    const [participants, waitlist, logs] = await Promise.all([
+      TicketService.getEventParticipants(eventId),
+      OrganizerService.getWaitlist(eventId),
+      OrganizerService.getEntryLogs(eventId, 20)
+    ]);
     const modal = document.getElementById('participants-modal');
     const tbody = document.getElementById('participants-table-body');
+    const titleEl = document.getElementById('participants-modal-title');
     if (!modal || !tbody) return;
 
+    if (titleEl) titleEl.textContent = `Participants — ${event.title}`;
+
     tbody.innerHTML = participants.length === 0
-      ? '<tr><td colspan="4" class="text-center text-muted">Aucun participant</td></tr>'
+      ? '<tr><td colspan="6" class="text-center text-muted">Aucun participant</td></tr>'
       : participants.map(p => `
         <tr>
           <td>${p.userName}</td>
           <td>${p.userEmail}</td>
-          <td>${p.ticketCode}</td>
+          <td>${p.ticketTypeName || 'Standard'}</td>
+          <td><code class="small">${p.ticketCode}</code></td>
+          <td>${Utils.formatPrice(p.totalPrice || p.price)}</td>
           <td><span class="badge ${p.status === TICKET_STATUS.VALID ? 'badge-valid' : 'badge-used'}">${p.status}</span></td>
         </tr>
       `).join('');
 
+    OrganizerService.renderWaitlist(waitlist, 'waitlist-table-body');
+    OrganizerService.renderEntryLogs(logs, 'entry-logs-table-body');
+
     new bootstrap.Modal(modal).show();
+  },
+
+  async duplicateEvent(eventId) {
+    await OrganizerService.duplicateEvent(eventId);
+    const events = await EventService.getOrganizerEvents(AuthService.currentUser.uid);
+    this.renderEventsTable(events, 'events-table-body');
+  },
+
+  exportParticipantsCSV() {
+    if (this._currentParticipantsEventId) {
+      OrganizerService.exportParticipantsCSV(this._currentParticipantsEventId);
+    }
+  },
+
+  exportParticipantsPDF() {
+    if (this._currentParticipantsEventId) {
+      OrganizerService.exportParticipantsPDF(this._currentParticipantsEventId);
+    }
+  },
+
+  async sendParticipantNotification(channel) {
+    if (!this._currentParticipantsEventId) return;
+    const message = document.getElementById('notify-message')?.value.trim();
+    if (!message) {
+      Utils.showToast('Saisissez un message.', 'error');
+      return;
+    }
+    await OrganizerService.sendNotification(this._currentParticipantsEventId, {
+      channel,
+      subject: 'EventFlow Africa',
+      message,
+      target: 'all'
+    });
+  },
+
+  exportSalesCSV() {
+    OrganizerService.exportSalesCSV(AuthService.currentUser.uid);
   },
 
   async deleteEvent(eventId) {
@@ -387,6 +449,10 @@ const DashboardService = {
     document.getElementById('add-ticket-type-btn')?.addEventListener('click', () => {
       this.addTicketTypeRow();
     });
+
+    document.getElementById('add-promo-btn')?.addEventListener('click', () => {
+      OrganizerService.addPromoCodeRow();
+    });
   },
 
   addTicketTypeRow(data = {}) {
@@ -399,19 +465,31 @@ const DashboardService = {
     row.dataset.sold = data.sold || 0;
     row.innerHTML = `
       <div class="row g-2 align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label small">Nom</label>
           <input type="text" class="form-control form-control-sm tt-name" value="${data.name || ''}" placeholder="VIP" required>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+          <label class="form-label small">Type</label>
+          <select class="form-select form-select-sm tt-kind">
+            <option value="${TICKET_KINDS.STANDARD}" ${data.kind === TICKET_KINDS.STANDARD || !data.kind ? 'selected' : ''}>Standard</option>
+            <option value="${TICKET_KINDS.VIP}" ${data.kind === TICKET_KINDS.VIP ? 'selected' : ''}>VIP</option>
+            <option value="${TICKET_KINDS.EARLY_BIRD}" ${data.kind === TICKET_KINDS.EARLY_BIRD ? 'selected' : ''}>Early bird</option>
+          </select>
+        </div>
+        <div class="col-md-2">
           <label class="form-label small">Prix (FCFA)</label>
           <input type="number" class="form-control form-control-sm tt-price" min="0" value="${data.price ?? 0}">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label small">Quota</label>
           <input type="number" class="form-control form-control-sm tt-quota" min="1" value="${data.quota || 50}" required>
         </div>
         <div class="col-md-2">
+          <label class="form-label small">Early bird jusqu'au</label>
+          <input type="date" class="form-control form-control-sm tt-early-until" value="${data.earlyBirdUntil || ''}">
+        </div>
+        <div class="col-md-1">
           <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-tt-btn"><i class="bi bi-trash"></i></button>
         </div>
       </div>
@@ -443,13 +521,24 @@ const DashboardService = {
       document.getElementById('ticket-types-list').innerHTML = '';
       event.ticketTypes.forEach(t => this.addTicketTypeRow(t));
     }
+    const waitlistEl = document.getElementById('event-waitlist');
+    if (waitlistEl) waitlistEl.checked = !!event.waitlistEnabled;
+    const pubAt = event.scheduledPublishAt;
+    if (pubAt && document.getElementById('event-scheduled-publish')) {
+      const d = pubAt.toDate ? pubAt.toDate() : new Date(pubAt);
+      document.getElementById('event-scheduled-publish').value = d.toISOString().slice(0, 16);
+    }
+    OrganizerService.fillPromoCodes(event.promoCodes || []);
   },
 
   collectTicketTypes() {
     return Array.from(document.querySelectorAll('.ticket-type-row')).map(row => ({
       id: row.dataset.typeId,
       name: row.querySelector('.tt-name')?.value.trim(),
+      kind: row.querySelector('.tt-kind')?.value || TICKET_KINDS.STANDARD,
       price: parseInt(row.querySelector('.tt-price')?.value) || 0,
+      regularPrice: parseInt(row.querySelector('.tt-price')?.value) || 0,
+      earlyBirdUntil: row.querySelector('.tt-early-until')?.value || null,
       quota: parseInt(row.querySelector('.tt-quota')?.value) || 0,
       sold: parseInt(row.dataset.sold) || 0
     })).filter(t => t.name);
@@ -477,7 +566,10 @@ const DashboardService = {
       capacity,
       ticketTypes: useTypes ? ticketTypes : [],
       status: document.getElementById('event-status').value,
-      imageUrl: document.getElementById('event-image').value.trim()
+      imageUrl: document.getElementById('event-image').value.trim(),
+      waitlistEnabled: document.getElementById('event-waitlist')?.checked || false,
+      scheduledPublishAt: document.getElementById('event-scheduled-publish')?.value || null,
+      promoCodes: OrganizerService.collectPromoCodes()
     };
   },
 
@@ -697,7 +789,7 @@ const DashboardService = {
   },
 
   async validateTicket(ticketId) {
-    await TicketService.markTicketUsed(ticketId);
+    await TicketService.markTicketUsed(ticketId, { method: 'qr', allowOffline: true });
     document.getElementById('scan-result').innerHTML = `
       <i class="bi bi-check-circle-fill text-success fs-1"></i>
       <h5 class="mt-2">Entrée validée !</h5>

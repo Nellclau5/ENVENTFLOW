@@ -15,7 +15,10 @@ const EventService = {
       : EVENT_STATUS.DRAFT;
   },
 
-  getStatusLabel(status) {
+  getStatusLabel(status, event = null) {
+    if (event?.scheduledPublishAt && status === EVENT_STATUS.PENDING) {
+      return 'Publication programmée';
+    }
     const labels = {
       [EVENT_STATUS.DRAFT]: 'Brouillon',
       [EVENT_STATUS.PENDING]: 'En attente',

@@ -8,7 +8,9 @@ const TicketService = {
       const type = ticketTypeId
         ? event.ticketTypes.find(t => t.id === ticketTypeId)
         : event.ticketTypes[0];
-      return type?.price || 0;
+      return typeof OrganizerService !== 'undefined'
+        ? OrganizerService.getEffectivePrice(type)
+        : (type?.price || 0);
     }
     return event.price || 0;
   },
@@ -20,7 +22,7 @@ const TicketService = {
   /**
    * Achète un billet
    */
-  async purchaseTicket(eventId, quantity = 1, ticketTypeId = null) {
+  async purchaseTicket(eventId, quantity = 1, ticketTypeId = null, promoCode = null) {
     if (!AuthService.currentUser) {
       window.location.href = `login.html?redirect=event-details.html?id=${eventId}`;
       return;
@@ -44,13 +46,21 @@ const TicketService = {
         }
         event._selectedTicketType = type;
       } else if ((event.placesLeft || 0) < quantity) {
+        if (event.waitlistEnabled) {
+          throw new Error('COMPLET_WAITLIST');
+        }
         throw new Error('Places insuffisantes.');
       }
 
       const ticketCode = Utils.generateTicketId();
       const user = AuthService.currentUser;
       const userData = AuthService.userData;
-      const unitPrice = this.getTicketUnitPrice(event, ticketTypeId);
+      let unitPrice = this.getTicketUnitPrice(event, ticketTypeId);
+      const promoResult = typeof OrganizerService !== 'undefined'
+        ? OrganizerService.applyPromo(event, promoCode, unitPrice)
+        : { price: unitPrice, promo: null };
+      if (promoResult.error) throw new Error(promoResult.error);
+      unitPrice = promoResult.price;
       const totalPrice = unitPrice * quantity;
       const commissionAmount = Math.round(totalPrice * COMMISSION_RATE);
 
@@ -67,6 +77,8 @@ const TicketService = {
         userEmail: user.email,
         price: unitPrice,
         ticketTypeName: event._selectedTicketType?.name || 'Standard',
+        ticketKind: event._selectedTicketType?.kind || TICKET_KINDS.STANDARD,
+        promoCode: promoResult.promo?.code || null,
         quantity,
         totalPrice,
         status: TICKET_STATUS.VALID,
@@ -103,6 +115,12 @@ const TicketService = {
         );
         eventUpdate.ticketTypes = types;
       }
+      if (promoResult.promo && event.promoCodes?.length) {
+        const promos = event.promoCodes.map(p =>
+          p.code === promoResult.promo.code ? { ...p, used: (p.used || 0) + 1 } : p
+        );
+        eventUpdate.promoCodes = promos;
+      }
       batch.update(eventRef, eventUpdate);
 
       await batch.commit();
@@ -125,6 +143,13 @@ const TicketService = {
       return { ticket, event };
     } catch (error) {
       console.error('Erreur achat billet:', error);
+      if (error.message === 'COMPLET_WAITLIST') {
+        const join = confirm('Événement complet. Rejoindre la liste d\'attente ?');
+        if (join && typeof OrganizerService !== 'undefined') {
+          await OrganizerService.joinWaitlist(eventId, quantity, ticketTypeId);
+        }
+        return;
+      }
       const msg = error.code === 'permission-denied'
         ? 'Permission refusée. Reconnectez-vous ou contactez le support.'
         : (error.message || 'Erreur lors de l\'achat.');
@@ -285,16 +310,33 @@ const TicketService = {
   /**
    * Marque un billet comme utilisé
    */
-  async markTicketUsed(ticketId) {
+  async markTicketUsed(ticketId, options = {}) {
     Utils.showLoading(true);
     try {
+      const doc = await db.collection(COLLECTIONS.TICKETS).doc(ticketId).get();
+      const ticket = doc.exists ? { id: doc.id, ...doc.data() } : null;
+
+      if (!navigator.onLine && options.allowOffline && ticket) {
+        OrganizerService.queueOfflineScan(ticket.ticketCode, ticketId, ticket.eventId);
+        Utils.showToast('Scan enregistré hors ligne. Sera synchronisé à la reconnexion.');
+        return ticket;
+      }
+
       await db.collection(COLLECTIONS.TICKETS).doc(ticketId).update({
         status: TICKET_STATUS.USED,
         usedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      if (ticket && typeof OrganizerService !== 'undefined') {
+        await OrganizerService.logEntry(ticket, options.method || 'qr', false);
+      }
       Utils.showToast('Billet marqué comme utilisé.');
+      return ticket;
     } catch (error) {
-      Utils.showToast('Erreur lors de la validation.', 'error');
+      if (!navigator.onLine && options.allowOffline) {
+        Utils.showToast('Mode hors ligne : scan mis en file d\'attente.', 'error');
+      } else {
+        Utils.showToast('Erreur lors de la validation.', 'error');
+      }
     } finally {
       Utils.showLoading(false);
     }

@@ -23,8 +23,16 @@
       <button type="button" class="btn btn-sm btn-ef-outline" data-action="logout">Sortir</button>
     </div>
 
-    <h1 class="h4 mb-1">Contrôle d'accès</h1>
-    <p class="text-white-50 small mb-4">Scannez les QR codes à l'entrée de l'événement</p>
+    <h1 class="h4 mb-1">Mode staff — Jour J</h1>
+    <p class="text-white-50 small mb-2">Scannez les QR codes à l'entrée. Logs automatiques. Fonctionne hors ligne.</p>
+    <p class="small mb-4">Entrées validées : <strong id="scan-counter">0</strong>
+      <span id="offline-queue-badge" class="badge bg-warning text-dark ms-2 d-none">0</span> en attente sync
+    </p>
+
+    <div class="mb-3" id="scan-event-filter-wrap">
+      <label class="form-label text-white-50 small" for="scan-event-filter">Filtrer par événement</label>
+      <select id="scan-event-filter" class="form-select form-select-sm"></select>
+    </div>
 
     <div class="d-flex gap-2 mb-3">
       <button type="button" class="btn btn-ef-primary flex-fill" id="start-scanner-btn">
@@ -46,6 +54,10 @@
     </form>
 
     <div id="scan-result"></div>
+
+    <button type="button" class="btn btn-ef-outline btn-sm w-100 mt-3" id="sync-offline-btn">
+      <i class="bi bi-cloud-arrow-up me-1"></i> Synchroniser scans hors ligne
+    </button>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -57,6 +69,7 @@
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/events.js"></script>
+  <script src="js/organizer.js"></script>
   <script src="js/tickets.js"></script>
   <script src="js/scan.js"></script>
   <script src="js/pwa.js"></script>

@@ -307,7 +307,9 @@ const App = {
 
         const typeId = document.getElementById('ticket-type-select')?.value || null;
 
-        const result = await TicketService.purchaseTicket(eventId, qty, typeId || null);
+        const promoCode = document.getElementById('promo-code')?.value?.trim() || null;
+
+        const result = await TicketService.purchaseTicket(eventId, qty, typeId || null, promoCode);
 
         if (result) {
 

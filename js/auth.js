@@ -246,8 +246,8 @@ const AuthService = {
 
   async requireController() {
     await this.requireAuth();
-    if (!this.hasRole(ROLES.CONTROLLER) && !this.hasRole(ROLES.ADMIN)) {
-      Utils.showToast('Accès réservé aux contrôleurs.', 'error');
+    if (!this.hasRole(ROLES.CONTROLLER) && !this.hasRole(ROLES.ADMIN) && !this.hasRole(ROLES.ORGANIZER)) {
+      Utils.showToast('Accès réservé au staff (organisateur / contrôleur).', 'error');
       window.location.href = 'index.html';
     }
   },

@@ -71,6 +71,11 @@
                 </select>
                 <small class="text-muted">La publication nécessite l'approbation d'un administrateur.</small>
               </div>
+              <div class="col-md-6">
+                <label class="form-label" for="event-scheduled-publish">Publication programmée (optionnel)</label>
+                <input type="datetime-local" class="form-control" id="event-scheduled-publish">
+                <small class="text-muted">Date souhaitée de mise en ligne après validation admin.</small>
+              </div>
             </div>
 
             <!-- Date & Lieu -->
@@ -117,6 +122,29 @@
               <button type="button" class="btn btn-ef-outline btn-sm mt-2" id="add-ticket-type-btn">
                 <i class="bi bi-plus me-1"></i> Ajouter un type
               </button>
+              <p class="text-muted small mt-2 mb-0">Types : Standard, VIP (accès privilégié), Early bird (tarif réduit avant date limite).</p>
+            </div>
+
+            <div class="mb-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="event-waitlist">
+                <label class="form-check-label" for="event-waitlist">Activer la liste d'attente quand complet</label>
+              </div>
+            </div>
+
+            <h4 class="form-section-title"><i class="bi bi-tag me-2"></i>Codes promo</h4>
+            <div class="mb-4">
+              <div class="row g-2 small text-muted mb-1">
+                <div class="col-md-3">Code</div>
+                <div class="col-md-2">Réduction %</div>
+                <div class="col-md-2">Réduction FCFA</div>
+                <div class="col-md-2">Utilisations max</div>
+                <div class="col-md-2">Valide jusqu'au</div>
+              </div>
+              <div id="promo-codes-list"></div>
+              <button type="button" class="btn btn-ef-outline btn-sm mt-2" id="add-promo-btn">
+                <i class="bi bi-plus me-1"></i> Ajouter un code promo
+              </button>
             </div>
 
             <!-- Image -->
@@ -144,6 +172,7 @@
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/events.js"></script>
+  <script src="js/organizer.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/pwa.js"></script>
 </body>
