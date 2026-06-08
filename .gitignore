@@ -1,6 +1,8 @@
 node_modules/
 functions/node_modules/
 .firebase/
+.vercel/
 *.log
 .DS_Store
 Thumbs.db
+.vercel

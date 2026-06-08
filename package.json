@@ -14,8 +14,8 @@
 
     "deploy": "npx firebase-tools deploy --project eventflow-africa",
     "deploy:functions": "npx firebase-tools deploy --only functions --project eventflow-africa",
-    "deploy:all": "npx firebase-tools deploy --project eventflow-africa"
-
+    "deploy:all": "npx firebase-tools deploy --project eventflow-africa",
+    "deploy:vercel": "npx vercel deploy --prod --yes --scope nellclau5s-projects",
     "pwa:icons": "node scripts/generate-pwa-icons.js"
 
   },
