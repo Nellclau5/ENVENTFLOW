@@ -6,20 +6,56 @@ const EventService = {
   /**
    * Crée un événement
    */
+  normalizeEventStatus(status) {
+    const isAdmin = AuthService.hasRole(ROLES.ADMIN);
+    if (isAdmin) return status;
+    if (status === EVENT_STATUS.PUBLISHED) return EVENT_STATUS.PENDING;
+    return [EVENT_STATUS.DRAFT, EVENT_STATUS.PENDING].includes(status)
+      ? status
+      : EVENT_STATUS.DRAFT;
+  },
+
+  getStatusLabel(status) {
+    const labels = {
+      [EVENT_STATUS.DRAFT]: 'Brouillon',
+      [EVENT_STATUS.PENDING]: 'En attente',
+      [EVENT_STATUS.PUBLISHED]: 'Publié',
+      [EVENT_STATUS.REJECTED]: 'Rejeté'
+    };
+    return labels[status] || status;
+  },
+
+  getStatusBadgeClass(status) {
+    const classes = {
+      [EVENT_STATUS.DRAFT]: 'badge-draft',
+      [EVENT_STATUS.PENDING]: 'badge-pending',
+      [EVENT_STATUS.PUBLISHED]: 'badge-published',
+      [EVENT_STATUS.REJECTED]: 'badge-rejected'
+    };
+    return classes[status] || 'badge-draft';
+  },
+
   async createEvent(eventData) {
     Utils.showLoading(true);
     try {
       const user = AuthService.currentUser;
+      const status = this.normalizeEventStatus(eventData.status);
       const docRef = await db.collection(COLLECTIONS.EVENTS).add({
         ...eventData,
+        status,
+        featured: false,
         organizerId: user.uid,
         organizerName: AuthService.userData?.displayName || user.email,
         placesLeft: parseInt(eventData.capacity),
         soldTickets: 0,
         revenue: 0,
+        commissionTotal: 0,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      if (status === EVENT_STATUS.PENDING) {
+        Utils.showToast('Événement soumis pour validation admin.');
+      }
       Utils.showToast('Événement créé avec succès !');
       return docRef.id;
     } catch (error) {
@@ -40,7 +76,11 @@ const EventService = {
   async updateEvent(eventId, eventData) {
     Utils.showLoading(true);
     try {
-      const updateData = { ...eventData, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      const updateData = {
+        ...eventData,
+        status: this.normalizeEventStatus(eventData.status),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
       if (eventData.capacity) {
         const event = await this.getEvent(eventId);
         const sold = event.soldTickets || 0;
@@ -98,17 +138,148 @@ const EventService = {
 
     const snapshot = await query.get();
     let events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    events = this.applyClientFilters(events, filters);
+    return events;
+  },
+
+  applyClientFilters(events, filters = {}) {
+    let result = [...events];
 
     if (filters.search) {
       const search = filters.search.toLowerCase();
-      events = events.filter(e =>
+      result = result.filter(e =>
         e.title?.toLowerCase().includes(search) ||
         e.location?.toLowerCase().includes(search) ||
-        e.description?.toLowerCase().includes(search)
+        e.description?.toLowerCase().includes(search) ||
+        e.city?.toLowerCase().includes(search) ||
+        e.organizerName?.toLowerCase().includes(search)
       );
     }
 
-    return events;
+    if (filters.city) {
+      const city = filters.city.toLowerCase();
+      result = result.filter(e =>
+        (e.city || e.location || '').toLowerCase().includes(city)
+      );
+    }
+
+    if (filters.dateFrom) {
+      result = result.filter(e => (e.date || '') >= filters.dateFrom);
+    }
+
+    if (filters.dateTo) {
+      result = result.filter(e => (e.date || '') <= filters.dateTo);
+    }
+
+    if (filters.priceType === 'free') {
+      result = result.filter(e => this.getEventMinPrice(e) === 0);
+    } else if (filters.priceType === 'paid') {
+      result = result.filter(e => this.getEventMinPrice(e) > 0);
+    }
+
+    if (filters.priceMin != null && filters.priceMin !== '') {
+      const min = parseInt(filters.priceMin);
+      result = result.filter(e => this.getEventMinPrice(e) >= min);
+    }
+
+    if (filters.priceMax != null && filters.priceMax !== '') {
+      const max = parseInt(filters.priceMax);
+      result = result.filter(e => this.getEventMinPrice(e) <= max);
+    }
+
+    if (filters.organizer) {
+      const org = filters.organizer.toLowerCase();
+      result = result.filter(e =>
+        (e.organizerName || '').toLowerCase().includes(org)
+      );
+    }
+
+    result = this.sortEvents(result, filters.sortBy);
+    return result;
+  },
+
+  sortEvents(events, sortBy = 'date-asc') {
+    const sorted = [...events];
+    switch (sortBy) {
+      case 'date-desc':
+        return sorted.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      case 'price-asc':
+        return sorted.sort((a, b) => this.getEventMinPrice(a) - this.getEventMinPrice(b));
+      case 'price-desc':
+        return sorted.sort((a, b) => this.getEventMinPrice(b) - this.getEventMinPrice(a));
+      case 'popular':
+        return sorted.sort((a, b) => (b.soldTickets || 0) - (a.soldTickets || 0));
+      default:
+        return sorted.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    }
+  },
+
+  getEventMinPrice(event) {
+    if (event.ticketTypes?.length) {
+      return Math.min(...event.ticketTypes.map(t => t.price || 0));
+    }
+    return event.price || 0;
+  },
+
+  getEventDisplayPrice(event) {
+    if (event.ticketTypes?.length) {
+      const prices = event.ticketTypes.map(t => t.price || 0);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (min === max) return Utils.formatPrice(min);
+      return `À partir de ${Utils.formatPrice(min)}`;
+    }
+    return Utils.formatPrice(event.price);
+  },
+
+  async getFeaturedEvents(limit = 6) {
+    try {
+      const snapshot = await db.collection(COLLECTIONS.EVENTS)
+        .where('status', '==', EVENT_STATUS.PUBLISHED)
+        .where('featured', '==', true)
+        .orderBy('date', 'asc')
+        .limit(limit)
+        .get();
+      if (!snapshot.empty) {
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+    } catch (error) {
+      console.warn('Featured query fallback:', error);
+    }
+    const events = await this.getPublishedEvents();
+    return events.slice(0, limit);
+  },
+
+  async getPendingEvents() {
+    const snapshot = await db.collection(COLLECTIONS.EVENTS)
+      .where('status', '==', EVENT_STATUS.PENDING)
+      .orderBy('createdAt', 'desc')
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  async moderateEvent(eventId, action, reason = '') {
+    const updates = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (action === 'approve') {
+      updates.status = EVENT_STATUS.PUBLISHED;
+      updates.rejectionReason = firebase.firestore.FieldValue.delete();
+    } else if (action === 'reject') {
+      updates.status = EVENT_STATUS.REJECTED;
+      updates.rejectionReason = reason || 'Non conforme aux règles de la plateforme.';
+    } else {
+      throw new Error('Action invalide');
+    }
+    await db.collection(COLLECTIONS.EVENTS).doc(eventId).update(updates);
+  },
+
+  async toggleFeatured(eventId, featured) {
+    await db.collection(COLLECTIONS.EVENTS).doc(eventId).update({
+      featured,
+      featuredAt: featured
+        ? firebase.firestore.FieldValue.serverTimestamp()
+        : firebase.firestore.FieldValue.delete(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
   },
 
   /**
@@ -164,19 +335,28 @@ const EventService = {
    * Génère le HTML d'une carte événement
    */
   renderEventCard(event) {
-    const priceClass = event.price == 0 ? 'free' : '';
-    const priceText = Utils.formatPrice(event.price);
+    const minPrice = this.getEventMinPrice(event);
+    const priceClass = minPrice === 0 ? 'free' : '';
+    const priceText = this.getEventDisplayPrice(event);
+    const featuredBadge = event.featured
+      ? '<span class="featured-badge"><i class="bi bi-star-fill me-1"></i>En vedette</span>'
+      : '';
     const dateText = Utils.formatDate(event.date);
     const placesLeft = event.placesLeft ?? event.capacity;
 
     return `
       <div class="col-md-6 col-lg-4 mb-4">
-        <a href="event-details.html?id=${event.id}" class="text-decoration-none">
+        <div class="event-card-wrapper position-relative">
+          <button type="button" class="favorite-btn event-card-fav" data-event-id="${event.id}" aria-label="Favori">
+            <i class="bi bi-heart"></i>
+          </button>
+          <a href="event-details.html?id=${event.id}" class="text-decoration-none">
           <div class="event-card">
             <div class="event-card-image">
               ${event.imageUrl ? `<img src="${event.imageUrl}" alt="${event.title}">` :
                 `<i class="bi bi-calendar-event text-white" style="font-size:3rem;opacity:0.5"></i>`}
               <span class="category-badge">${event.category || 'Événement'}</span>
+              ${featuredBadge}
             </div>
             <div class="event-card-body">
               <div class="event-card-date">
@@ -192,7 +372,8 @@ const EventService = {
               </div>
             </div>
           </div>
-        </a>
+          </a>
+        </div>
       </div>
     `;
   },

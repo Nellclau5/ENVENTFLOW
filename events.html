@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -30,6 +30,7 @@
         <ul class="navbar-nav mx-auto">
           <li class="nav-item"><a class="nav-link" href="index.html">Accueil</a></li>
           <li class="nav-item"><a class="nav-link active" href="events.html">Événements</a></li>
+          <li class="nav-item"><a class="nav-link" href="help.html">Aide</a></li>
           <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
         </ul>
         <div class="d-flex align-items-center" id="auth-links"></div>
@@ -53,8 +54,53 @@
       <!-- Recherche -->
       <form id="events-search-form" class="search-bar-wrapper d-flex flex-column flex-sm-row mb-4">
         <label for="events-search" class="visually-hidden">Rechercher un événement</label>
-        <input type="text" id="events-search" class="form-control" placeholder="Rechercher par titre, lieu...">
+        <input type="text" id="events-search" class="form-control" placeholder="Titre, lieu, organisateur, description...">
         <button type="submit" class="btn btn-search"><i class="bi bi-search me-1"></i> Rechercher</button>
+      </form>
+
+      <!-- Filtres avancés -->
+      <form id="events-filters-form" class="events-filters">
+        <div>
+          <label for="filter-city" class="form-label small text-muted mb-1">Ville</label>
+          <input type="text" id="filter-city" class="form-control form-control-sm" placeholder="Ex. Dakar">
+        </div>
+        <div>
+          <label for="filter-date-from" class="form-label small text-muted mb-1">À partir du</label>
+          <input type="date" id="filter-date-from" class="form-control form-control-sm">
+        </div>
+        <div>
+          <label for="filter-date-to" class="form-label small text-muted mb-1">Jusqu'au</label>
+          <input type="date" id="filter-date-to" class="form-control form-control-sm">
+        </div>
+        <div>
+          <label for="filter-price" class="form-label small text-muted mb-1">Prix</label>
+          <select id="filter-price" class="form-select form-select-sm">
+            <option value="">Tous</option>
+            <option value="free">Gratuit</option>
+            <option value="paid">Payant</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-price-min" class="form-label small text-muted mb-1">Prix min (FCFA)</label>
+          <input type="number" id="filter-price-min" class="form-control form-control-sm" min="0" placeholder="0">
+        </div>
+        <div>
+          <label for="filter-price-max" class="form-label small text-muted mb-1">Prix max (FCFA)</label>
+          <input type="number" id="filter-price-max" class="form-control form-control-sm" min="0" placeholder="50000">
+        </div>
+        <div>
+          <label for="filter-sort" class="form-label small text-muted mb-1">Trier par</label>
+          <select id="filter-sort" class="form-select form-select-sm">
+            <option value="date-asc">Date (proche)</option>
+            <option value="date-desc">Date (lointain)</option>
+            <option value="price-asc">Prix croissant</option>
+            <option value="price-desc">Prix décroissant</option>
+            <option value="popular">Popularité</option>
+          </select>
+        </div>
+        <div class="d-flex align-items-end">
+          <button type="button" id="reset-filters-btn" class="btn btn-ef-outline btn-sm w-100">Réinitialiser</button>
+        </div>
       </form>
 
       <!-- Filtres catégories -->
@@ -82,6 +128,9 @@
   <script src="js/auth.js"></script>
   <script src="js/events.js"></script>
   <script src="js/tickets.js"></script>
+  <script src="js/favorites.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/support.js"></script>
   <script src="js/main.js"></script>
   <script src="js/pwa.js"></script>
 </body>

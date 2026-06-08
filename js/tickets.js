@@ -3,10 +3,24 @@
  */
 
 const TicketService = {
+  getTicketUnitPrice(event, ticketTypeId = null) {
+    if (event.ticketTypes?.length) {
+      const type = ticketTypeId
+        ? event.ticketTypes.find(t => t.id === ticketTypeId)
+        : event.ticketTypes[0];
+      return type?.price || 0;
+    }
+    return event.price || 0;
+  },
+
+  getTicketTypePlacesLeft(type) {
+    return Math.max(0, (type.quota || 0) - (type.sold || 0));
+  },
+
   /**
    * Achète un billet
    */
-  async purchaseTicket(eventId, quantity = 1) {
+  async purchaseTicket(eventId, quantity = 1, ticketTypeId = null) {
     if (!AuthService.currentUser) {
       window.location.href = `login.html?redirect=event-details.html?id=${eventId}`;
       return;
@@ -20,14 +34,25 @@ const TicketService = {
         throw new Error('Cet événement n\'est pas disponible.');
       }
 
-      if ((event.placesLeft || 0) < quantity) {
+      if (event.ticketTypes?.length) {
+        const type = ticketTypeId
+          ? event.ticketTypes.find(t => t.id === ticketTypeId)
+          : event.ticketTypes.find(t => this.getTicketTypePlacesLeft(t) >= quantity);
+        if (!type) throw new Error('Type de billet invalide ou complet.');
+        if (this.getTicketTypePlacesLeft(type) < quantity) {
+          throw new Error('Places insuffisantes pour ce type de billet.');
+        }
+        event._selectedTicketType = type;
+      } else if ((event.placesLeft || 0) < quantity) {
         throw new Error('Places insuffisantes.');
       }
 
       const ticketCode = Utils.generateTicketId();
       const user = AuthService.currentUser;
       const userData = AuthService.userData;
-      const totalPrice = (event.price || 0) * quantity;
+      const unitPrice = this.getTicketUnitPrice(event, ticketTypeId);
+      const totalPrice = unitPrice * quantity;
+      const commissionAmount = Math.round(totalPrice * COMMISSION_RATE);
 
       const batch = db.batch();
 
@@ -40,7 +65,8 @@ const TicketService = {
         userId: user.uid,
         userName: userData?.displayName || user.email,
         userEmail: user.email,
-        price: event.price || 0,
+        price: unitPrice,
+        ticketTypeName: event._selectedTicketType?.name || 'Standard',
         quantity,
         totalPrice,
         status: TICKET_STATUS.VALID,
@@ -56,17 +82,28 @@ const TicketService = {
         eventTitle: event.title,
         userId: user.uid,
         amount: totalPrice,
+        commissionAmount,
         quantity,
         purchasedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
       // Mettre à jour l'événement
       const eventRef = db.collection(COLLECTIONS.EVENTS).doc(eventId);
-      batch.update(eventRef, {
+      const eventUpdate = {
         placesLeft: firebase.firestore.FieldValue.increment(-quantity),
         soldTickets: firebase.firestore.FieldValue.increment(quantity),
-        revenue: firebase.firestore.FieldValue.increment(totalPrice)
-      });
+        revenue: firebase.firestore.FieldValue.increment(totalPrice),
+        commissionTotal: firebase.firestore.FieldValue.increment(commissionAmount)
+      };
+      if (event.ticketTypes?.length && event._selectedTicketType) {
+        const types = event.ticketTypes.map(t =>
+          t.id === event._selectedTicketType.id
+            ? { ...t, sold: (t.sold || 0) + quantity }
+            : t
+        );
+        eventUpdate.ticketTypes = types;
+      }
+      batch.update(eventRef, eventUpdate);
 
       await batch.commit();
 
@@ -120,6 +157,87 @@ const TicketService = {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   },
 
+  async findUserByEmail(email) {
+    const normalized = email.trim().toLowerCase();
+    const snapshot = await db.collection(COLLECTIONS.USERS)
+      .where('email', '==', normalized)
+      .limit(1)
+      .get();
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+  },
+
+  async transferTicket(ticketId, recipientEmail) {
+    if (!AuthService.currentUser) return;
+    Utils.showLoading(true);
+    try {
+      const email = recipientEmail.trim().toLowerCase();
+      if (email === AuthService.currentUser.email.toLowerCase()) {
+        throw new Error('Vous ne pouvez pas transférer à vous-même.');
+      }
+
+      const recipient = await this.findUserByEmail(email);
+      if (!recipient) {
+        throw new Error('Aucun compte trouvé avec cet email. Le destinataire doit s\'inscrire d\'abord.');
+      }
+
+      const doc = await db.collection(COLLECTIONS.TICKETS).doc(ticketId).get();
+      if (!doc.exists) throw new Error('Billet introuvable.');
+      const ticket = { id: doc.id, ...doc.data() };
+
+      if (ticket.userId !== AuthService.currentUser.uid) {
+        throw new Error('Ce billet ne vous appartient pas.');
+      }
+      if (ticket.status !== TICKET_STATUS.VALID) {
+        throw new Error('Seuls les billets valides peuvent être transférés.');
+      }
+
+      const batch = db.batch();
+      const ticketRef = db.collection(COLLECTIONS.TICKETS).doc(ticketId);
+      batch.update(ticketRef, {
+        userId: recipient.id,
+        userName: recipient.displayName || recipient.email,
+        userEmail: recipient.email,
+        transferredAt: firebase.firestore.FieldValue.serverTimestamp(),
+        transferredFrom: AuthService.currentUser.uid
+      });
+
+      const transferRef = db.collection(COLLECTIONS.TICKET_TRANSFERS).doc();
+      batch.set(transferRef, {
+        ticketId,
+        ticketCode: ticket.ticketCode,
+        eventId: ticket.eventId,
+        eventTitle: ticket.eventTitle,
+        fromUserId: AuthService.currentUser.uid,
+        fromUserEmail: AuthService.currentUser.email,
+        toUserId: recipient.id,
+        toUserEmail: recipient.email,
+        transferredAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      await batch.commit();
+      Utils.showToast(`Billet transféré à ${recipient.displayName || email} !`);
+      return true;
+    } catch (error) {
+      Utils.showToast(error.message || 'Erreur lors du transfert.', 'error');
+      throw error;
+    } finally {
+      Utils.showLoading(false);
+    }
+  },
+
+  async getTransferHistory(userId) {
+    const [sent, received] = await Promise.all([
+      db.collection(COLLECTIONS.TICKET_TRANSFERS).where('fromUserId', '==', userId).get(),
+      db.collection(COLLECTIONS.TICKET_TRANSFERS).where('toUserId', '==', userId).get()
+    ]);
+    const all = [
+      ...sent.docs.map(d => ({ id: d.id, ...d.data(), direction: 'sent' })),
+      ...received.docs.map(d => ({ id: d.id, ...d.data(), direction: 'received' }))
+    ];
+    return all.sort((a, b) => (b.transferredAt?.seconds || 0) - (a.transferredAt?.seconds || 0));
+  },
+
   /**
    * Participants d'un événement
    */
@@ -147,7 +265,13 @@ const TicketService = {
     const ticket = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 
     if (ticket.status === TICKET_STATUS.USED) {
-      return { valid: false, used: true, ticket, message: 'Ce billet a déjà été utilisé.' };
+      return {
+        valid: false,
+        used: true,
+        ticket,
+        message: 'Ce billet a déjà été utilisé.',
+        usedAt: ticket.usedAt
+      };
     }
 
     if (ticket.status === TICKET_STATUS.CANCELLED) {
@@ -201,9 +325,12 @@ const TicketService = {
         <span class="badge ${ticket.status === TICKET_STATUS.VALID ? 'badge-valid' : 'badge-used'}">
           ${ticket.status === TICKET_STATUS.VALID ? 'Valide' : 'Utilisé'}
         </span>
-        <div class="mt-3 d-flex gap-2 justify-content-center">
+        <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
           <button type="button" class="btn btn-ef-outline btn-sm" data-download-pdf="${ticket.id}">
             <i class="bi bi-download me-1"></i> Télécharger PDF
+          </button>
+          <button type="button" class="btn btn-ef-outline btn-sm" data-share-ticket="${ticket.id}">
+            <i class="bi bi-share me-1"></i> Partager
           </button>
         </div>
       </div>
@@ -211,6 +338,9 @@ const TicketService = {
 
     container.querySelector('[data-download-pdf]')?.addEventListener('click', () => {
       this.downloadPDF(ticket.id);
+    });
+    container.querySelector('[data-share-ticket]')?.addEventListener('click', () => {
+      this.shareTicket(ticket, event);
     });
 
     try {
@@ -228,6 +358,26 @@ const TicketService = {
   /**
    * Télécharge le PDF d'un billet
    */
+  async shareTicket(ticket, event) {
+    const text = `Mon billet EventFlow — ${event?.title || ticket.eventTitle}\nCode: ${ticket.ticketCode}\nDate: ${Utils.formatDate(event?.date)}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'EventFlow Africa — Billet',
+          text,
+          url: window.location.href
+        });
+        return;
+      } catch (_) { /* annulé */ }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      Utils.showToast('Détails du billet copiés !');
+    } catch (_) {
+      Utils.showToast(text, 'success');
+    }
+  },
+
   async downloadPDF(ticketId) {
     try {
       Utils.showLoading(true);
@@ -277,13 +427,17 @@ const TicketService = {
             <h6 class="mb-1">${ticket.eventTitle}</h6>
             <small class="text-muted">N° ${ticket.ticketCode} — ${Utils.formatPrice(ticket.price)}</small>
           </div>
-          <div class="d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="badge ${ticket.status === TICKET_STATUS.VALID ? 'badge-valid' : 'badge-used'}">
               ${ticket.status === TICKET_STATUS.VALID ? 'Valide' : 'Utilisé'}
             </span>
             <button class="btn btn-ef-outline btn-sm" onclick="TicketService.showTicketModal('${ticket.id}')">
               Voir billet
             </button>
+            ${ticket.status === TICKET_STATUS.VALID ? `
+            <button class="btn btn-ef-outline btn-sm" onclick="DashboardService.openTransferModal('${ticket.id}')">
+              <i class="bi bi-arrow-left-right me-1"></i> Transférer
+            </button>` : ''}
           </div>
         </div>
       </div>

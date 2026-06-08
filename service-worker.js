@@ -3,7 +3,7 @@
  * Cache des ressources statiques + stratégie network-first pour les pages HTML
  */
 
-const CACHE_VERSION = 'eventflow-v3';
+const CACHE_VERSION = 'eventflow-v6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -13,11 +13,14 @@ const PRECACHE_URLS = [
   '/events.html',
   '/event-details.html',
   '/contact.html',
+  '/help.html',
+  '/firebase-messaging-sw.js',
   '/login.html',
   '/register.html',
   '/dashboard.html',
   '/create-event.html',
   '/admin.html',
+  '/scan.html',
   '/reset-password.html',
   '/offline.html',
   '/manifest.webmanifest',
@@ -34,6 +37,10 @@ const PRECACHE_URLS = [
   '/js/main.js',
   '/js/dashboard.js',
   '/js/admin.js',
+  '/js/favorites.js',
+  '/js/notifications.js',
+  '/js/support.js',
+  '/js/scan.js',
   '/js/pwa.js',
   '/js/vendor/qrcodejs.min.js',
   '/js/vendor/jspdf.umd.min.js',
@@ -106,6 +113,24 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(staleWhileRevalidate(request));
+});
+
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() || {};
+  const title = data.title || 'EventFlow Africa';
+  const options = {
+    body: data.body || 'Nouvelle notification',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-72.png',
+    data: { url: data.url || '/events.html' }
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(clients.openWindow(url));
 });
 
 async function cacheFirst(request) {

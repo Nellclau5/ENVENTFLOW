@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,8 +32,10 @@
         <a href="admin.html" class="sidebar-nav-item active" data-page="admin.html"><i class="bi bi-shield-lock"></i> Vue d'ensemble</a>
         <a href="admin.html?tab=users" class="sidebar-nav-item"><i class="bi bi-people"></i> Utilisateurs</a>
         <a href="admin.html?tab=events" class="sidebar-nav-item"><i class="bi bi-calendar-event"></i> Événements</a>
+        <a href="admin.html?tab=moderation" class="sidebar-nav-item"><i class="bi bi-shield-check"></i> Modération</a>
         <a href="admin.html?tab=categories" class="sidebar-nav-item"><i class="bi bi-tags"></i> Catégories</a>
         <div class="sidebar-section-title">Navigation</div>
+        <a href="scan.html" class="sidebar-nav-item" data-page="scan.html"><i class="bi bi-qr-code-scan"></i> Scanner QR</a>
         <a href="dashboard.html" class="sidebar-nav-item"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="index.html" class="sidebar-nav-item"><i class="bi bi-house"></i> Site public</a>
         <button type="button" class="sidebar-nav-item" data-action="logout"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> Déconnexion</button>
@@ -56,6 +58,7 @@
           <button type="button" class="nav-link active" id="tab-overview-btn" data-bs-toggle="tab" data-bs-target="#tab-overview" role="tab" aria-selected="true" aria-controls="tab-overview">Vue d'ensemble</button>
           <button type="button" class="nav-link" id="tab-users-btn" data-bs-toggle="tab" data-bs-target="#tab-users" role="tab" aria-selected="false" aria-controls="tab-users" tabindex="-1">Utilisateurs</button>
           <button type="button" class="nav-link" id="tab-events-btn" data-bs-toggle="tab" data-bs-target="#tab-events" role="tab" aria-selected="false" aria-controls="tab-events" tabindex="-1">Événements</button>
+          <button type="button" class="nav-link" id="tab-moderation-btn" data-bs-toggle="tab" data-bs-target="#tab-moderation" role="tab" aria-selected="false" aria-controls="tab-moderation" tabindex="-1">Modération</button>
           <button type="button" class="nav-link" id="tab-categories-btn" data-bs-toggle="tab" data-bs-target="#tab-categories" role="tab" aria-selected="false" aria-controls="tab-categories" tabindex="-1">Catégories</button>
         </nav>
 
@@ -72,9 +75,15 @@
               </div>
               <div class="col-lg-6">
                 <div class="admin-chart-card">
+                  <h5 class="mb-3">Finances & commissions</h5>
+                  <div id="finance-summary"></div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="admin-chart-card">
                   <h5 class="mb-3">Actions rapides</h5>
                   <div class="admin-quick-actions">
-                    <a href="create-event.html" class="btn btn-ef-primary"><i class="bi bi-plus me-1"></i> Créer événement</a>
+                    <button type="button" class="btn btn-ef-primary" data-bs-toggle="tab" data-bs-target="#tab-moderation"><i class="bi bi-shield-check me-1"></i> Modération</button>
                     <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-users">Gérer utilisateurs</button>
                     <button type="button" class="btn btn-ef-outline" data-bs-toggle="tab" data-bs-target="#tab-categories">Gérer catégories</button>
                   </div>
@@ -90,7 +99,7 @@
               <div class="table-responsive-wrap">
                 <table class="dash-table">
                   <thead>
-                    <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Inscription</th><th>Modifier rôle</th></tr>
+                    <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Inscription</th><th>Actions</th></tr>
                   </thead>
                   <tbody id="admin-users-body"></tbody>
                 </table>
@@ -110,6 +119,22 @@
                   <tbody id="admin-events-body"></tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          <!-- Modération -->
+          <div class="tab-pane fade" id="tab-moderation" role="tabpanel" aria-labelledby="tab-moderation-btn" tabindex="0">
+            <div class="dash-table-card p-4 mb-4">
+              <h3 class="mb-3">File d'attente — Événements à valider</h3>
+              <div id="moderation-queue"></div>
+            </div>
+            <div class="dash-table-card p-4">
+              <h5 class="mb-2">Règles de modération</h5>
+              <ul class="text-muted small mb-0">
+                <li>Les organisateurs soumettent en statut « En attente » — vous approuvez ou rejetez.</li>
+                <li>Les nouveaux comptes organisateurs nécessitent une approbation dans l'onglet Utilisateurs.</li>
+                <li>Les événements « En vedette » apparaissent en priorité sur la page d'accueil.</li>
+              </ul>
             </div>
           </div>
 

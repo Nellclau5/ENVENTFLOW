@@ -52,8 +52,46 @@
 }
 
 .user-role-badge.admin { background: rgba(231, 76, 60, 0.15); color: var(--ef-danger); }
-.user-role-badge.organizer { background: rgba(13, 115, 119, 0.15); color: var(--ef-accent); }
+.user-role-badge.organizer { background: rgba(255, 107, 0, 0.15); color: var(--ef-primary); }
+.user-role-badge.controller { background: rgba(255, 184, 0, 0.15); color: var(--ef-gold); }
 .user-role-badge.user { background: rgba(134, 142, 150, 0.15); color: var(--ef-gray-700); }
+
+.account-status-badge {
+  padding: 0.25rem 0.625rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.account-status-badge.active { background: rgba(34, 197, 94, 0.15); color: var(--ef-success); }
+.account-status-badge.pending { background: rgba(255, 184, 0, 0.15); color: var(--ef-warning); }
+.account-status-badge.suspended { background: rgba(239, 68, 68, 0.15); color: var(--ef-danger); }
+
+.moderation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--ef-gray-100);
+  border-radius: var(--ef-radius-sm);
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.finance-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--ef-gray-200);
+}
+
+.finance-row:last-child { border-bottom: none; }
+
+.featured-pill {
+  color: var(--ef-warning);
+  font-size: 0.875rem;
+}
 
 .category-manager-item {
   display: flex;

@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -50,7 +50,12 @@
       <div class="container">
         <a href="events.html" class="text-white-50 small"><i class="bi bi-arrow-left me-1"></i> Retour aux événements</a>
         <span class="badge bg-white text-dark ms-2" id="event-category">Catégorie</span>
-        <h1 class="hero-title mt-3" id="event-title">Chargement...</h1>
+        <div class="d-flex align-items-start justify-content-between gap-3 mt-3">
+          <h1 class="hero-title mb-0" id="event-title">Chargement...</h1>
+          <button type="button" id="favorite-btn" class="favorite-btn" aria-label="Ajouter aux favoris">
+            <i class="bi bi-heart"></i>
+          </button>
+        </div>
         <div class="event-detail-meta">
           <div class="event-detail-meta-item"><i class="bi bi-calendar3"></i> <span id="event-date"></span></div>
           <div class="event-detail-meta-item"><i class="bi bi-geo-alt"></i> <span id="event-location"></span></div>
@@ -76,6 +81,14 @@
               <div class="d-flex justify-content-between mb-2">
                 <span>Places restantes</span>
                 <strong><span id="places-left">-</span> / <span id="event-capacity">-</span></strong>
+              </div>
+              <div id="ticket-type-wrap" class="mb-3 d-none">
+                <label for="ticket-type-select" class="form-label small">Type de billet</label>
+                <select id="ticket-type-select" class="form-select"></select>
+              </div>
+              <div class="mb-3">
+                <label for="ticket-quantity" class="form-label small">Quantité</label>
+                <input type="number" id="ticket-quantity" class="form-control" value="1" min="1" max="10">
               </div>
               <hr>
               <button type="button" id="buy-ticket-btn" class="btn btn-ef-primary w-100 btn-lg">
@@ -109,6 +122,7 @@
   <script src="js/auth.js"></script>
   <script src="js/events.js"></script>
   <script src="js/tickets.js"></script>
+  <script src="js/favorites.js"></script>
   <script src="js/main.js"></script>
   <script src="js/pwa.js"></script>
 </body>

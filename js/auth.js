@@ -22,6 +22,9 @@ const AuthService = {
           this.userData = null;
         }
         Utils.updateNavbar(user, this.userData);
+        if (user && typeof NotificationService !== 'undefined') {
+          NotificationService.initFCM().catch(() => {});
+        }
         resolve(user);
       });
     });
@@ -38,15 +41,25 @@ const AuthService = {
       const credential = await auth.createUserWithEmailAndPassword(email, password);
       await credential.user.updateProfile({ displayName });
 
+      const accountStatus = role === ROLES.ORGANIZER
+        ? ACCOUNT_STATUS.PENDING
+        : ACCOUNT_STATUS.ACTIVE;
+
       await db.collection(COLLECTIONS.USERS).doc(credential.user.uid).set({
-        email,
+        email: email.trim().toLowerCase(),
         displayName,
         role,
+        accountStatus,
         phone: '',
         bio: '',
+        preferences: { ...DEFAULT_PREFERENCES },
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+
+      if (role === ROLES.ORGANIZER) {
+        Utils.showToast('Compte organisateur créé — en attente de validation admin.');
+      }
 
       Utils.showToast('Compte créé avec succès !');
       return credential.user;
@@ -136,11 +149,51 @@ const AuthService = {
     }
   },
 
+  async changePassword(currentPassword, newPassword) {
+    if (!this.currentUser) throw new Error('Non connecté');
+    Utils.showLoading(true);
+    try {
+      const credential = firebase.auth.EmailAuthProvider.credential(
+        this.currentUser.email,
+        currentPassword
+      );
+      await this.currentUser.reauthenticateWithCredential(credential);
+      await this.currentUser.updatePassword(newPassword);
+      Utils.showToast('Mot de passe mis à jour !');
+    } catch (error) {
+      Utils.showToast(this.getErrorMessage(error), 'error');
+      throw error;
+    } finally {
+      Utils.showLoading(false);
+    }
+  },
+
+  async updatePreferences(preferences) {
+    if (!this.currentUser) return;
+    await db.collection(COLLECTIONS.USERS).doc(this.currentUser.uid).update({
+      preferences: { ...(this.userData?.preferences || DEFAULT_PREFERENCES), ...preferences },
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    this.userData = await this.getUserData(this.currentUser.uid);
+  },
+
   /**
    * Vérifie si l'utilisateur a un rôle spécifique
    */
   hasRole(role) {
     return this.userData?.role === role;
+  },
+
+  isAccountActive() {
+    if (!this.userData) return false;
+    if (this.hasRole(ROLES.ADMIN)) return true;
+    return !this.userData.accountStatus || this.userData.accountStatus === ACCOUNT_STATUS.ACTIVE;
+  },
+
+  isStaff() {
+    return this.hasRole(ROLES.ORGANIZER) ||
+      this.hasRole(ROLES.ADMIN) ||
+      this.hasRole(ROLES.CONTROLLER);
   },
 
   /**
@@ -180,6 +233,22 @@ const AuthService = {
     if (!this.hasRole(ROLES.ORGANIZER) && !this.hasRole(ROLES.ADMIN)) {
       Utils.showToast('Accès réservé aux organisateurs.', 'error');
       window.location.href = 'index.html';
+      return;
+    }
+    if (this.hasRole(ROLES.ORGANIZER) && !this.isAccountActive()) {
+      const msg = this.userData?.accountStatus === ACCOUNT_STATUS.SUSPENDED
+        ? 'Votre compte organisateur est suspendu.'
+        : 'Votre compte organisateur est en attente de validation admin.';
+      Utils.showToast(msg, 'error');
+      window.location.href = 'dashboard.html';
+    }
+  },
+
+  async requireController() {
+    await this.requireAuth();
+    if (!this.hasRole(ROLES.CONTROLLER) && !this.hasRole(ROLES.ADMIN)) {
+      Utils.showToast('Accès réservé aux contrôleurs.', 'error');
+      window.location.href = 'index.html';
     }
   },
 
@@ -210,6 +279,8 @@ const AuthService = {
     }
     if (this.hasRole(ROLES.ADMIN)) {
       window.location.href = 'admin.html';
+    } else if (this.hasRole(ROLES.CONTROLLER)) {
+      window.location.href = 'scan.html';
     } else if (this.hasRole(ROLES.ORGANIZER)) {
       window.location.href = 'dashboard.html';
     } else {

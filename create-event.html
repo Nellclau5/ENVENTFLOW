@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -67,8 +67,9 @@
                 <label class="form-label" for="event-status">Statut *</label>
                 <select class="form-select" id="event-status" required>
                   <option value="draft">Brouillon (non publié)</option>
-                  <option value="published">Publié</option>
+                  <option value="pending">Soumettre pour validation admin</option>
                 </select>
+                <small class="text-muted">La publication nécessite l'approbation d'un administrateur.</small>
               </div>
             </div>
 
@@ -83,15 +84,25 @@
                 <label class="form-label" for="event-time">Heure *</label>
                 <input type="time" class="form-control" id="event-time" required>
               </div>
-              <div class="col-12">
-                <label class="form-label" for="event-location">Lieu *</label>
+              <div class="col-md-6">
+                <label class="form-label" for="event-city">Ville *</label>
+                <input type="text" class="form-control" id="event-city" required placeholder="Ex: Dakar">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="event-location">Lieu / Adresse *</label>
                 <input type="text" class="form-control" id="event-location" required placeholder="Adresse ou nom du lieu">
               </div>
             </div>
 
             <!-- Billetterie -->
             <h4 class="form-section-title"><i class="bi bi-ticket-perforated me-2"></i>Billetterie</h4>
-            <div class="row g-3 mb-4">
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="use-ticket-types">
+                <label class="form-check-label" for="use-ticket-types">Plusieurs types de billets (Standard, VIP, Groupe…)</label>
+              </div>
+            </div>
+            <div id="simple-ticket-fields" class="row g-3 mb-4">
               <div class="col-md-6">
                 <label class="form-label" for="event-price">Prix (FCFA)</label>
                 <input type="number" class="form-control" id="event-price" min="0" value="0" placeholder="0 = Gratuit">
@@ -100,6 +111,12 @@
                 <label class="form-label" for="event-capacity">Nombre de places *</label>
                 <input type="number" class="form-control" id="event-capacity" min="1" required placeholder="100">
               </div>
+            </div>
+            <div id="ticket-types-section" class="d-none mb-4">
+              <div id="ticket-types-list"></div>
+              <button type="button" class="btn btn-ef-outline btn-sm mt-2" id="add-ticket-type-btn">
+                <i class="bi bi-plus me-1"></i> Ajouter un type
+              </button>
             </div>
 
             <!-- Image -->

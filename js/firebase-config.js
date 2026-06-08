@@ -20,12 +20,25 @@ const firebaseConfig = {
   appId: "1:249089579362:web:81b2ed59d0b8926ddab43b"
 };
 
+/**
+ * Clé VAPID Web Push (Firebase Console > Paramètres > Cloud Messaging > Certificats Web Push)
+ * Générez ou copiez la paire de clés, puis collez la clé publique ici.
+ * Sans cette clé, les notifications locales fonctionnent ; le push serveur FCM nécessite la clé.
+ */
+const FCM_VAPID_KEY = '';
+
 // Initialisation Firebase
 firebase.initializeApp(firebaseConfig);
 
 // Instances globales
 const auth = firebase.auth();
 const db = firebase.firestore();
+let messaging = null;
+try {
+  if (typeof firebase.messaging === 'function') {
+    messaging = firebase.messaging();
+  }
+} catch (_) { /* FCM non supporté (ex. certains navigateurs) */ }
 
 // Collections Firestore
 const COLLECTIONS = {
@@ -33,27 +46,54 @@ const COLLECTIONS = {
   EVENTS: 'events',
   TICKETS: 'tickets',
   CATEGORIES: 'categories',
-  PURCHASES: 'purchases'
+  PURCHASES: 'purchases',
+  FAVORITES: 'favorites',
+  EVENT_ALERTS: 'eventAlerts',
+  SUPPORT_TICKETS: 'supportTickets',
+  TICKET_TRANSFERS: 'ticketTransfers'
 };
 
 // Rôles utilisateur
 const ROLES = {
   USER: 'user',
   ORGANIZER: 'organizer',
+  CONTROLLER: 'controller',
   ADMIN: 'admin'
+};
+
+// Statut compte (organisateurs)
+const ACCOUNT_STATUS = {
+  ACTIVE: 'active',
+  PENDING: 'pending',
+  SUSPENDED: 'suspended'
 };
 
 // Statuts événement
 const EVENT_STATUS = {
   DRAFT: 'draft',
-  PUBLISHED: 'published'
+  PENDING: 'pending',
+  PUBLISHED: 'published',
+  REJECTED: 'rejected'
 };
+
+// Commission EventFlow (5 %)
+const COMMISSION_RATE = 0.05;
 
 // Statuts billet
 const TICKET_STATUS = {
   VALID: 'valid',
   USED: 'used',
   CANCELLED: 'cancelled'
+};
+
+// Préférences utilisateur par défaut
+const DEFAULT_PREFERENCES = {
+  notifyNewEvents: true,
+  notifyFavorites: true,
+  notifyReminders: true,
+  pushEnabled: false,
+  preferredCity: '',
+  preferredLanguage: 'fr'
 };
 
 // Catégories par défaut (seed initial)

@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -38,12 +38,21 @@
         <a href="dashboard.html#tickets" class="sidebar-nav-item" data-page="dashboard.html">
           <i class="bi bi-ticket-perforated"></i> Mes billets
         </a>
+        <a href="dashboard.html#favorites" class="sidebar-nav-item" data-page="dashboard.html">
+          <i class="bi bi-heart"></i> Favoris
+        </a>
+        <a href="dashboard.html#orders" class="sidebar-nav-item" data-page="dashboard.html">
+          <i class="bi bi-bag-check"></i> Commandes
+        </a>
         <a href="dashboard.html#profile" class="sidebar-nav-item" data-page="dashboard.html">
           <i class="bi bi-person"></i> Mon profil
         </a>
+        <a href="help.html" class="sidebar-nav-item" data-page="help.html">
+          <i class="bi bi-question-circle"></i> Aide
+        </a>
 
-        <div class="sidebar-section-title" data-organizer-only>Outils</div>
-        <a href="dashboard.html#scan" class="sidebar-nav-item" data-page="dashboard.html" data-organizer-only>
+        <div class="sidebar-section-title" data-staff-only>Outils</div>
+        <a href="scan.html" class="sidebar-nav-item" data-page="scan.html" data-staff-only>
           <i class="bi bi-qr-code-scan"></i> Scanner QR
         </a>
         <a href="events.html" class="sidebar-nav-item">
@@ -107,27 +116,78 @@
           <div class="p-3" id="user-tickets-container"></div>
         </div>
 
+        <!-- Favoris -->
+        <div class="dash-table-card mb-4" id="favorites">
+          <div class="dash-table-header"><h3><i class="bi bi-heart me-2"></i>Mes favoris</h3></div>
+          <div id="favorites-list"></div>
+        </div>
+
+        <!-- Alertes -->
+        <div class="dash-table-card mb-4" id="alerts">
+          <div class="dash-table-header"><h3><i class="bi bi-bell me-2"></i>Mes alertes</h3></div>
+          <div class="p-4">
+            <p class="text-muted small">Recevez une notification quand un nouvel événement correspond à vos critères.</p>
+            <div id="user-alerts-list" class="d-flex flex-wrap gap-2 mb-3"></div>
+            <form id="add-alert-form" class="row g-2 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label small" for="alert-type">Type</label>
+                <select id="alert-type" class="form-select form-select-sm">
+                  <option value="city">Ville</option>
+                  <option value="category">Catégorie</option>
+                </select>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label small" for="alert-value">Valeur</label>
+                <input type="text" id="alert-value" class="form-control form-control-sm" placeholder="Ex. Dakar ou Musique" required>
+              </div>
+              <div class="col-md-4">
+                <button type="submit" class="btn btn-ef-primary btn-sm w-100"><i class="bi bi-plus me-1"></i> Ajouter alerte</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <!-- Historique achats -->
-        <div class="dash-table-card mb-4">
+        <div class="dash-table-card mb-4" id="orders">
           <div class="dash-table-header">
-            <h3>Historique des achats</h3>
+            <h3>Historique des commandes</h3>
           </div>
           <div class="table-responsive-wrap">
             <table class="dash-table">
               <thead>
                 <tr>
+                  <th>N° commande</th>
                   <th>Événement</th>
-                  <th>Quantité</th>
+                  <th>Qté</th>
                   <th>Montant</th>
                   <th>Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="purchase-history-body">
-                <tr><td colspan="4" class="text-center text-muted py-4">Chargement...</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Chargement...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
+
+        <!-- Transferts -->
+        <div class="dash-table-card mb-4" id="transfers">
+          <div class="dash-table-header"><h3>Transferts de billets</h3></div>
+          <div class="table-responsive-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr><th>Événement</th><th>Code</th><th>Direction</th><th>Email</th><th>Date</th></tr>
+              </thead>
+              <tbody id="transfer-history-body">
+                <tr><td colspan="5" class="text-center text-muted py-4">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Historique achats (legacy anchor removed - merged above) -->
+        <div class="d-none" id="purchase-history-legacy"></div>
 
         <!-- Profil -->
         <div class="dash-table-card mb-4" id="profile">
@@ -159,7 +219,58 @@
                   <textarea class="form-control" id="profile-bio" rows="3" placeholder="Quelques mots sur vous..."></textarea>
                 </div>
                 <div class="col-12">
-                  <button type="submit" class="btn btn-ef-primary">Enregistrer</button>
+                  <button type="submit" class="btn btn-ef-primary">Enregistrer le profil</button>
+                </div>
+              </div>
+            </form>
+
+            <hr class="my-4">
+
+            <h5 class="mb-3">Mot de passe</h5>
+            <form id="password-form" class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label" for="current-password">Mot de passe actuel</label>
+                <input type="password" class="form-control" id="current-password" required autocomplete="current-password">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="new-password">Nouveau mot de passe</label>
+                <input type="password" class="form-control" id="new-password" required minlength="6" autocomplete="new-password">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="confirm-password">Confirmer</label>
+                <input type="password" class="form-control" id="confirm-password" required minlength="6" autocomplete="new-password">
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-ef-outline">Changer le mot de passe</button>
+              </div>
+            </form>
+
+            <hr class="my-4">
+
+            <h5 class="mb-3">Préférences & notifications</h5>
+            <form id="preferences-form">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="pref-city">Ville préférée</label>
+                  <input type="text" class="form-control" id="pref-city" placeholder="Ex. Dakar">
+                </div>
+                <div class="col-12">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="pref-notify-events">
+                    <label class="form-check-label" for="pref-notify-events">Alertes nouveaux événements</label>
+                  </div>
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="pref-notify-favorites">
+                    <label class="form-check-label" for="pref-notify-favorites">Rappels événements favoris</label>
+                  </div>
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="pref-notify-reminders">
+                    <label class="form-check-label" for="pref-notify-reminders">Rappels avant l'événement</label>
+                  </div>
+                  <button type="button" class="btn btn-ef-primary btn-sm me-2" id="enable-push-btn">
+                    <i class="bi bi-bell me-1"></i> Activer notifications push
+                  </button>
+                  <button type="submit" class="btn btn-ef-outline btn-sm">Enregistrer préférences</button>
                 </div>
               </div>
             </form>
@@ -215,6 +326,30 @@
     </div>
   </div>
 
+  <!-- Modal Transfert -->
+  <div class="modal fade" id="transfer-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Transférer un billet</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <form id="transfer-form">
+          <div class="modal-body">
+            <p class="text-muted small">Le destinataire doit posséder un compte EventFlow avec cet email.</p>
+            <input type="hidden" id="transfer-ticket-id">
+            <label class="form-label" for="transfer-email">Email du destinataire</label>
+            <input type="email" class="form-control" id="transfer-email" required placeholder="destinataire@email.com">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ef-outline" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-ef-primary">Transférer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Billet -->
   <div class="modal fade" id="ticket-modal" tabindex="-1" aria-labelledby="ticket-modal-title" aria-hidden="true">
     <div class="modal-dialog">
@@ -235,11 +370,14 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/events.js"></script>
   <script src="js/tickets.js"></script>
+  <script src="js/favorites.js"></script>
+  <script src="js/notifications.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/pwa.js"></script>
 </body>

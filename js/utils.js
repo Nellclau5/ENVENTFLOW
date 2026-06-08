@@ -244,6 +244,9 @@ const Utils = {
           if (userData?.role === ROLES.ADMIN) {
             dashboardLink.href = 'admin.html';
             dashboardLink.textContent = 'Administration';
+          } else if (userData?.role === ROLES.CONTROLLER) {
+            dashboardLink.href = 'scan.html';
+            dashboardLink.textContent = 'Scanner';
           } else if (userData?.role === ROLES.ORGANIZER) {
             dashboardLink.href = 'dashboard.html';
             dashboardLink.textContent = 'Dashboard';

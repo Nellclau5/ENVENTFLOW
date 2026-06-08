@@ -90,9 +90,14 @@ const DashboardService = {
       el.textContent = Utils.getInitials(data?.displayName || user.email);
     });
 
-    // Masquer sections organisateur si user simple
-    if (!AuthService.hasRole(ROLES.ORGANIZER) && !AuthService.hasRole(ROLES.ADMIN)) {
+    const isOrganizer = AuthService.hasRole(ROLES.ORGANIZER) || AuthService.hasRole(ROLES.ADMIN);
+    const isStaff = isOrganizer || AuthService.hasRole(ROLES.CONTROLLER);
+
+    if (!isOrganizer) {
       document.querySelectorAll('[data-organizer-only]').forEach(el => el.classList.add('d-none'));
+    }
+    if (!isStaff) {
+      document.querySelectorAll('[data-staff-only]').forEach(el => el.classList.add('d-none'));
     }
   },
 
@@ -111,17 +116,35 @@ const DashboardService = {
       this.renderOrganizerStats(stats);
       const events = await EventService.getOrganizerEvents(userId);
       this.renderEventsTable(events, 'events-table-body');
+      this.subscribeOrganizerRealtime(userId);
     } else {
       this.renderUserDashboardStats(tickets, purchases);
     }
 
     TicketService.renderUserTickets(tickets, 'user-tickets-container');
     this.renderPurchaseHistory(purchases);
+    await this.loadClientSections();
+  },
+
+  async loadClientSections() {
+    const userId = AuthService.currentUser.uid;
+    const [favEvents, alerts, transfers] = await Promise.all([
+      FavoriteService.getFavoriteEvents(userId),
+      AlertService.getUserAlerts(userId),
+      TicketService.getTransferHistory(userId)
+    ]);
+    FavoriteService.renderFavoritesList(favEvents, 'favorites-list');
+    AlertService.renderAlerts(alerts, 'user-alerts-list');
+    this.renderTransferHistory(transfers);
   },
 
   renderOrganizerStats(stats) {
     const container = document.getElementById('stats-grid');
     if (!container) return;
+
+    const fillRate = stats.totalCapacity > 0
+      ? Math.round((stats.totalTickets / stats.totalCapacity) * 100)
+      : 0;
 
     container.innerHTML = `
       <div class="col-md-6 col-xl-3">
@@ -152,7 +175,26 @@ const DashboardService = {
           <div class="dash-stat-label">Revenus totaux</div>
         </div>
       </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="dash-stat-card">
+          <div class="dash-stat-icon primary"><i class="bi bi-pie-chart"></i></div>
+          <div class="dash-stat-value">${fillRate}%</div>
+          <div class="dash-stat-label">Taux de remplissage</div>
+        </div>
+      </div>
     `;
+  },
+
+  subscribeOrganizerRealtime(organizerId) {
+    if (this._organizerUnsub) this._organizerUnsub();
+    this._organizerUnsub = db.collection(COLLECTIONS.EVENTS)
+      .where('organizerId', '==', organizerId)
+      .onSnapshot(async () => {
+        const stats = await EventService.getOrganizerStats(organizerId);
+        this.renderOrganizerStats(stats);
+        const events = await EventService.getOrganizerEvents(organizerId);
+        this.renderEventsTable(events, 'events-table-body');
+      }, (err) => console.warn('Realtime:', err));
   },
 
   renderUserDashboardStats(tickets, purchases) {
@@ -189,15 +231,39 @@ const DashboardService = {
     if (!historyContainer) return;
 
     historyContainer.innerHTML = purchases.length === 0
-      ? '<tr><td colspan="4" class="text-center text-muted py-4">Aucun achat</td></tr>'
+      ? '<tr><td colspan="6" class="text-center text-muted py-4">Aucune commande</td></tr>'
       : purchases.map(p => `
         <tr>
+          <td><code class="small">${p.ticketCode || p.id.slice(0, 8)}</code></td>
           <td>${p.eventTitle}</td>
           <td>${p.quantity || 1}</td>
           <td>${Utils.formatPrice(p.amount)}</td>
           <td>${Utils.formatDate(p.purchasedAt)}</td>
+          <td>${p.ticketId ? `<button type="button" class="btn btn-sm btn-ef-outline" onclick="TicketService.showTicketModal('${p.ticketId}')">Billet</button>` : '—'}</td>
         </tr>
       `).join('');
+  },
+
+  renderTransferHistory(transfers) {
+    const tbody = document.getElementById('transfer-history-body');
+    if (!tbody) return;
+    tbody.innerHTML = transfers.length === 0
+      ? '<tr><td colspan="5" class="text-center text-muted py-4">Aucun transfert</td></tr>'
+      : transfers.map(t => `
+        <tr>
+          <td>${t.eventTitle}</td>
+          <td><code class="small">${t.ticketCode}</code></td>
+          <td><span class="badge ${t.direction === 'sent' ? 'badge-used' : 'badge-valid'}">${t.direction === 'sent' ? 'Envoyé' : 'Reçu'}</span></td>
+          <td>${t.direction === 'sent' ? t.toUserEmail : t.fromUserEmail}</td>
+          <td>${Utils.formatDate(t.transferredAt)}</td>
+        </tr>
+      `).join('');
+  },
+
+  openTransferModal(ticketId) {
+    document.getElementById('transfer-ticket-id').value = ticketId;
+    document.getElementById('transfer-email').value = '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('transfer-modal')).show();
   },
 
   renderEventsTable(events, tbodyId) {
@@ -215,9 +281,7 @@ const DashboardService = {
         <td>${event.category || '-'}</td>
         <td>${Utils.formatDate(event.date)}</td>
         <td>${event.soldTickets || 0} / ${event.capacity}</td>
-        <td><span class="${event.status === EVENT_STATUS.PUBLISHED ? 'badge-published' : 'badge-draft'}">
-          ${event.status === EVENT_STATUS.PUBLISHED ? 'Publié' : 'Brouillon'}
-        </span></td>
+        <td><span class="${EventService.getStatusBadgeClass(event.status)}">${EventService.getStatusLabel(event.status)}</span></td>
         <td>
           <div class="d-flex gap-1">
             <a href="create-event.html?id=${event.id}" class="btn-action edit" title="Modifier">
@@ -266,10 +330,13 @@ const DashboardService = {
   /**
    * Formulaire création/édition événement
    */
+  ticketTypeCounter: 0,
+
   async loadEventForm() {
     await AuthService.requireOrganizer();
     await seedDefaultCategories();
     await EventService.populateCategorySelect('event-category', '', true);
+    this.setupTicketTypesUI();
 
     const eventId = Utils.getUrlParam('id');
     if (eventId) {
@@ -303,6 +370,56 @@ const DashboardService = {
     });
   },
 
+  setupTicketTypesUI() {
+    const toggle = document.getElementById('use-ticket-types');
+    const simple = document.getElementById('simple-ticket-fields');
+    const section = document.getElementById('ticket-types-section');
+
+    toggle?.addEventListener('change', () => {
+      const on = toggle.checked;
+      simple?.classList.toggle('d-none', on);
+      section?.classList.toggle('d-none', !on);
+      if (on && !document.querySelector('.ticket-type-row')) {
+        this.addTicketTypeRow({ name: 'Standard', price: 5000, quota: 100 });
+      }
+    });
+
+    document.getElementById('add-ticket-type-btn')?.addEventListener('click', () => {
+      this.addTicketTypeRow();
+    });
+  },
+
+  addTicketTypeRow(data = {}) {
+    const list = document.getElementById('ticket-types-list');
+    if (!list) return;
+    const id = `tt-${++this.ticketTypeCounter}`;
+    const row = document.createElement('div');
+    row.className = 'ticket-type-row';
+    row.dataset.typeId = data.id || id;
+    row.dataset.sold = data.sold || 0;
+    row.innerHTML = `
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small">Nom</label>
+          <input type="text" class="form-control form-control-sm tt-name" value="${data.name || ''}" placeholder="VIP" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Prix (FCFA)</label>
+          <input type="number" class="form-control form-control-sm tt-price" min="0" value="${data.price ?? 0}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Quota</label>
+          <input type="number" class="form-control form-control-sm tt-quota" min="1" value="${data.quota || 50}" required>
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-tt-btn"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+    `;
+    row.querySelector('.remove-tt-btn')?.addEventListener('click', () => row.remove());
+    list.appendChild(row);
+  },
+
   fillEventForm(event) {
     document.getElementById('event-title').value = event.title || '';
     document.getElementById('event-description').value = event.description || '';
@@ -311,23 +428,54 @@ const DashboardService = {
       ? event.date.toDate().toISOString().split('T')[0]
       : event.date || '';
     document.getElementById('event-time').value = event.time || '';
+    document.getElementById('event-city').value = event.city || '';
     document.getElementById('event-location').value = event.location || '';
     document.getElementById('event-price').value = event.price || 0;
     document.getElementById('event-capacity').value = event.capacity || '';
-    document.getElementById('event-status').value = event.status || EVENT_STATUS.DRAFT;
+    document.getElementById('event-status').value =
+      event.status === EVENT_STATUS.PUBLISHED ? EVENT_STATUS.PENDING : (event.status || EVENT_STATUS.DRAFT);
     document.getElementById('event-image').value = event.imageUrl || '';
+
+    if (event.ticketTypes?.length) {
+      document.getElementById('use-ticket-types').checked = true;
+      document.getElementById('simple-ticket-fields')?.classList.add('d-none');
+      document.getElementById('ticket-types-section')?.classList.remove('d-none');
+      document.getElementById('ticket-types-list').innerHTML = '';
+      event.ticketTypes.forEach(t => this.addTicketTypeRow(t));
+    }
+  },
+
+  collectTicketTypes() {
+    return Array.from(document.querySelectorAll('.ticket-type-row')).map(row => ({
+      id: row.dataset.typeId,
+      name: row.querySelector('.tt-name')?.value.trim(),
+      price: parseInt(row.querySelector('.tt-price')?.value) || 0,
+      quota: parseInt(row.querySelector('.tt-quota')?.value) || 0,
+      sold: parseInt(row.dataset.sold) || 0
+    })).filter(t => t.name);
   },
 
   getEventFormData() {
+    const useTypes = document.getElementById('use-ticket-types')?.checked;
+    const ticketTypes = useTypes ? this.collectTicketTypes() : [];
+    const capacity = useTypes
+      ? ticketTypes.reduce((s, t) => s + t.quota, 0)
+      : parseInt(document.getElementById('event-capacity').value) || 0;
+    const price = useTypes
+      ? (ticketTypes[0]?.price || 0)
+      : parseInt(document.getElementById('event-price').value) || 0;
+
     return {
       title: document.getElementById('event-title').value.trim(),
       description: document.getElementById('event-description').value.trim(),
       category: document.getElementById('event-category').value,
       date: document.getElementById('event-date').value,
       time: document.getElementById('event-time').value,
+      city: document.getElementById('event-city')?.value.trim() || '',
       location: document.getElementById('event-location').value.trim(),
-      price: parseInt(document.getElementById('event-price').value) || 0,
-      capacity: parseInt(document.getElementById('event-capacity').value) || 0,
+      price,
+      capacity,
+      ticketTypes: useTypes ? ticketTypes : [],
       status: document.getElementById('event-status').value,
       imageUrl: document.getElementById('event-image').value.trim()
     };
@@ -345,19 +493,96 @@ const DashboardService = {
     document.getElementById('profile-phone').value = data.phone || '';
     document.getElementById('profile-bio').value = data.bio || '';
 
+    const prefs = { ...DEFAULT_PREFERENCES, ...data.preferences };
+    document.getElementById('pref-city').value = prefs.preferredCity || '';
+    document.getElementById('pref-notify-events').checked = prefs.notifyNewEvents !== false;
+    document.getElementById('pref-notify-favorites').checked = prefs.notifyFavorites !== false;
+    document.getElementById('pref-notify-reminders').checked = prefs.notifyReminders !== false;
+
     const form = document.getElementById('profile-form');
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await AuthService.updateProfile({
-        displayName: document.getElementById('profile-name').value.trim(),
-        phone: document.getElementById('profile-phone').value.trim(),
-        bio: document.getElementById('profile-bio').value.trim()
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await AuthService.updateProfile({
+          displayName: document.getElementById('profile-name').value.trim(),
+          phone: document.getElementById('profile-phone').value.trim(),
+          bio: document.getElementById('profile-bio').value.trim()
+        });
+        this.populateUserInfo();
       });
-      this.populateUserInfo();
+    }
+
+    const pwdForm = document.getElementById('password-form');
+    if (pwdForm && !pwdForm.dataset.bound) {
+      pwdForm.dataset.bound = '1';
+      pwdForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPwd = document.getElementById('new-password').value;
+        const confirm = document.getElementById('confirm-password').value;
+        if (newPwd !== confirm) {
+          Utils.showToast('Les mots de passe ne correspondent pas.', 'error');
+          return;
+        }
+        await AuthService.changePassword(document.getElementById('current-password').value, newPwd);
+        pwdForm.reset();
+      });
+    }
+
+    const prefForm = document.getElementById('preferences-form');
+    if (prefForm && !prefForm.dataset.bound) {
+      prefForm.dataset.bound = '1';
+      prefForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await AuthService.updatePreferences({
+          preferredCity: document.getElementById('pref-city').value.trim(),
+          notifyNewEvents: document.getElementById('pref-notify-events').checked,
+          notifyFavorites: document.getElementById('pref-notify-favorites').checked,
+          notifyReminders: document.getElementById('pref-notify-reminders').checked
+        });
+        Utils.showToast('Préférences enregistrées !');
+      });
+    }
+
+    document.getElementById('enable-push-btn')?.addEventListener('click', () => {
+      NotificationService.requestPushPermission();
     });
 
-    const tickets = await TicketService.getUserTickets(AuthService.currentUser.uid);
-    TicketService.renderUserTickets(tickets, 'profile-tickets');
+    const alertForm = document.getElementById('add-alert-form');
+    if (alertForm && !alertForm.dataset.bound) {
+      alertForm.dataset.bound = '1';
+      alertForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await AlertService.addAlert(
+          document.getElementById('alert-type').value,
+          document.getElementById('alert-value').value
+        );
+        document.getElementById('alert-value').value = '';
+        const alerts = await AlertService.getUserAlerts(AuthService.currentUser.uid);
+        AlertService.renderAlerts(alerts, 'user-alerts-list');
+      });
+    }
+
+    const transferForm = document.getElementById('transfer-form');
+    if (transferForm && !transferForm.dataset.bound) {
+      transferForm.dataset.bound = '1';
+      transferForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ticketId = document.getElementById('transfer-ticket-id').value;
+        const email = document.getElementById('transfer-email').value;
+        const ok = await TicketService.transferTicket(ticketId, email);
+        if (ok) {
+          bootstrap.Modal.getInstance(document.getElementById('transfer-modal'))?.hide();
+          const userId = AuthService.currentUser.uid;
+          const [tickets, transfers] = await Promise.all([
+            TicketService.getUserTickets(userId),
+            TicketService.getTransferHistory(userId)
+          ]);
+          TicketService.renderUserTickets(tickets, 'user-tickets-container');
+          this.renderTransferHistory(transfers);
+        }
+      });
+    }
   },
 
   html5QrCode: null,
@@ -460,6 +685,7 @@ const DashboardService = {
         <i class="bi bi-exclamation-triangle-fill text-warning fs-1"></i>
         <h5 class="mt-2">${result.message}</h5>
         <p>${result.ticket?.userName || ''}</p>
+        <p class="text-muted small">Premier scan : ${Utils.formatDate(result.usedAt)}</p>
       `;
     } else {
       resultEl.classList.add('invalid');
