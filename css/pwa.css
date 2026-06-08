@@ -114,6 +114,127 @@
   }
 }
 
+/* Barre hors ligne */
+.pwa-offline-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  padding-top: calc(0.5rem + env(safe-area-inset-top, 0));
+  background: var(--ef-secondary);
+  color: var(--ef-white);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pwa-offline-link {
+  color: var(--ef-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.is-offline body {
+  padding-top: 2.5rem;
+}
+
+/* FAB accès rapide billets */
+.pwa-quick-fab {
+  position: fixed;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0));
+  right: 1.25rem;
+  z-index: 9990;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ef-primary), var(--ef-gold));
+  color: var(--ef-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  box-shadow: var(--ef-shadow-lg);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.pwa-quick-fab:hover {
+  color: var(--ef-secondary);
+  transform: scale(1.05);
+}
+
+.pwa-standalone .pwa-quick-fab {
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
+}
+
+/* Portefeuille billets */
+.wallet-page {
+  background: var(--ef-light);
+  min-height: 100vh;
+}
+
+.wallet-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  padding-top: calc(1rem + env(safe-area-inset-top, 0));
+  background: var(--ef-white);
+  border-bottom: 1px solid var(--ef-gray-200);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.wallet-header h1 {
+  font-size: 1.1rem;
+  margin: 0;
+  flex: 1;
+}
+
+.wallet-back {
+  color: var(--ef-secondary);
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+
+.wallet-offline-badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 50px;
+  background: rgba(255, 184, 0, 0.2);
+  color: var(--ef-warning);
+  font-weight: 700;
+}
+
+.wallet-ticket-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--ef-white);
+  border: 1px solid var(--ef-gray-200);
+  border-radius: var(--ef-radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.wallet-ticket-info h3 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.wallet-qr {
+  flex-shrink: 0;
+  padding: 0.25rem;
+  background: var(--ef-white);
+  border-radius: 8px;
+}
+
 @media (max-width: 575.98px) {
   .pwa-install-content {
     flex-wrap: wrap;
@@ -122,5 +243,10 @@
   .pwa-install-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .wallet-ticket-card {
+    flex-direction: column;
+    text-align: center;
   }
 }

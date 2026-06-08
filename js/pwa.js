@@ -1,5 +1,5 @@
 /**
- * EventFlow Africa — PWA : enregistrement SW + bouton d'installation
+ * EventFlow Africa — PWA : SW, cache, hors ligne, sync arrière-plan, raccourcis
  */
 
 const PWAService = {
@@ -8,8 +8,12 @@ const PWAService = {
   init() {
     this.registerServiceWorker();
     this.createInstallUI();
+    this.createOfflineBar();
+    this.createQuickAccessFAB();
     this.setupInstallPrompt();
     this.setupIOSHint();
+    this.setupConnectivity();
+    this.setupBackgroundSync();
     this.hideInstallUIIfStandalone();
   },
 
@@ -23,13 +27,93 @@ const PWAService = {
             const newWorker = reg.installing;
             newWorker?.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                this.showUpdateToast();
+                this.showUpdateToast(reg);
               }
             });
           });
+          navigator.serviceWorker.ready.then(() => {
+            navigator.serviceWorker.controller?.postMessage({ type: 'CACHE_TICKETS_PAGE' });
+          });
         })
         .catch((err) => console.warn('SW registration failed:', err));
+
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'BACKGROUND_SYNC') {
+          this.runBackgroundSync();
+        }
+      });
     });
+  },
+
+  createOfflineBar() {
+    if (document.getElementById('pwa-offline-bar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'pwa-offline-bar';
+    bar.className = 'pwa-offline-bar d-none';
+    bar.innerHTML = `
+      <i class="bi bi-wifi-off me-2"></i>
+      <span>Mode hors ligne</span>
+      <a href="tickets-wallet.html" class="pwa-offline-link ms-auto">Mes billets</a>
+    `;
+    document.body.prepend(bar);
+  },
+
+  createQuickAccessFAB() {
+    if (document.getElementById('pwa-quick-fab') || document.body.dataset.page === 'tickets-wallet') return;
+    const fab = document.createElement('a');
+    fab.id = 'pwa-quick-fab';
+    fab.href = 'tickets-wallet.html';
+    fab.className = 'pwa-quick-fab';
+    fab.title = 'Mes billets';
+    fab.setAttribute('aria-label', 'Accès rapide à mes billets');
+    fab.innerHTML = '<i class="bi bi-ticket-perforated"></i>';
+    document.body.appendChild(fab);
+  },
+
+  setupConnectivity() {
+    const update = () => {
+      const bar = document.getElementById('pwa-offline-bar');
+      if (bar) bar.classList.toggle('d-none', navigator.onLine);
+      document.documentElement.classList.toggle('is-offline', !navigator.onLine);
+      if (navigator.onLine) this.runBackgroundSync();
+    };
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    update();
+  },
+
+  setupBackgroundSync() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then((reg) => {
+      if ('sync' in reg) {
+        window.addEventListener('online', () => this.registerBackgroundSync(reg));
+      }
+    });
+  },
+
+  async registerBackgroundSync(registration) {
+    try {
+      if ('sync' in registration) {
+        await registration.sync.register('eventflow-offline-sync');
+      }
+    } catch (e) {
+      console.warn('Background sync:', e);
+    }
+  },
+
+  async runBackgroundSync() {
+    if (typeof PWAStore !== 'undefined') {
+      await PWAStore.processSyncQueue();
+    }
+    if (typeof OrganizerService !== 'undefined') {
+      await OrganizerService.syncOfflineQueue();
+    }
+    if (AuthService?.currentUser && typeof TicketService !== 'undefined' && navigator.onLine) {
+      try {
+        const tickets = await TicketService.getUserTickets(AuthService.currentUser.uid);
+        await PWAStore?.cacheTickets(AuthService.currentUser.uid, tickets);
+      } catch (_) { /* ignore */ }
+    }
   },
 
   createInstallUI() {
@@ -43,7 +127,7 @@ const PWAService = {
         <img src="/icons/icon-72.png" alt="" width="40" height="40" class="pwa-install-icon">
         <div class="pwa-install-text">
           <strong>Installer EventFlow Africa</strong>
-          <span>Accédez à vos événements comme une app mobile</span>
+          <span>Billets hors ligne, notifications et accès rapide</span>
         </div>
         <div class="pwa-install-actions">
           <button type="button" class="btn btn-ef-primary btn-sm" id="pwa-install-btn">
@@ -65,17 +149,15 @@ const PWAService = {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredPrompt = e;
-
       if (this.isStandalone()) return;
       if (sessionStorage.getItem('pwa-install-dismissed')) return;
-
       this.showBanner();
     });
 
     window.addEventListener('appinstalled', () => {
       this.deferredPrompt = null;
       this.hideBanner();
-      Utils?.showToast?.('Application installée avec succès !');
+      Utils?.showToast?.('Application installée — accédez à vos billets depuis l\'écran d\'accueil !');
     });
   },
 
@@ -98,7 +180,7 @@ const PWAService = {
     hint.id = 'pwa-ios-hint';
     hint.className = 'pwa-ios-hint';
     hint.innerHTML = `
-      <p><i class="bi bi-box-arrow-up me-2"></i> Sur iPhone : touchez <strong>Partager</strong> puis <strong>Sur l'écran d'accueil</strong> pour installer l'app.</p>
+      <p><i class="bi bi-box-arrow-up me-2"></i> Sur iPhone : <strong>Partager</strong> → <strong>Sur l'écran d'accueil</strong> pour installer et accéder à vos billets hors ligne.</p>
       <button type="button" class="pwa-ios-hint-close" aria-label="Fermer">&times;</button>
     `;
     document.body.appendChild(hint);
@@ -111,14 +193,10 @@ const PWAService = {
       Utils?.showToast?.('Installation non disponible sur ce navigateur.', 'error');
       return;
     }
-
     this.deferredPrompt.prompt();
     const { outcome } = await this.deferredPrompt.userChoice;
     this.deferredPrompt = null;
-
-    if (outcome === 'accepted') {
-      this.hideBanner();
-    }
+    if (outcome === 'accepted') this.hideBanner();
   },
 
   showBanner() {
@@ -146,11 +224,18 @@ const PWAService = {
       window.navigator.standalone === true;
   },
 
-  showUpdateToast() {
-    Utils?.showToast?.('Une nouvelle version est disponible. Rechargez la page.');
+  showUpdateToast(reg) {
+    Utils?.showToast?.('Nouvelle version disponible. Rechargez pour mettre à jour.');
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  },
+
+  async cacheUserTickets(userId, tickets) {
+    if (typeof PWAStore === 'undefined' || !userId) return;
+    await PWAStore.cacheTickets(userId, tickets);
   }
 };
 
 document.addEventListener('DOMContentLoaded', () => PWAService.init());
-
 window.PWAService = PWAService;

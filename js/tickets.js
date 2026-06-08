@@ -154,6 +154,10 @@ const TicketService = {
         status: TICKET_STATUS.VALID
       };
 
+      if (typeof PWAStore !== 'undefined') {
+        try { await this.getUserTickets(user.uid); } catch (_) { /* cache best-effort */ }
+      }
+
       Utils.showToast('Billet acheté avec succès !');
       return { ticket, event };
     } catch (error) {
@@ -179,11 +183,19 @@ const TicketService = {
    * Billets d'un utilisateur
    */
   async getUserTickets(userId) {
+    if (!navigator.onLine && typeof PWAStore !== 'undefined') {
+      const cached = await PWAStore.getCachedTickets(userId);
+      if (cached.length) return cached;
+    }
     const snapshot = await db.collection(COLLECTIONS.TICKETS)
       .where('userId', '==', userId)
       .orderBy('purchasedAt', 'desc')
       .get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (typeof PWAStore !== 'undefined') {
+      await PWAStore.cacheTickets(userId, tickets);
+    }
+    return tickets;
   },
 
   /**

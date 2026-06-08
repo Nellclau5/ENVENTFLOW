@@ -50,7 +50,7 @@ const NotificationService = {
 
     try {
       if ('serviceWorker' in navigator) {
-        await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
       }
 
       const tokenOptions = { serviceWorkerRegistration: await navigator.serviceWorker.ready };

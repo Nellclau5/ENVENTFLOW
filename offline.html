@@ -18,11 +18,28 @@
   <div class="offline-container text-center">
     <img src="icons/icon-192.png" alt="EventFlow Africa" width="96" height="96" class="mb-4">
     <h1>Vous êtes hors ligne</h1>
-    <p class="text-muted mb-4">Vérifiez votre connexion internet et réessayez.</p>
-    <button type="button" class="btn btn-ef-primary" onclick="location.reload()">
-      <i class="bi bi-arrow-clockwise me-1"></i> Réessayer
-    </button>
-    <a href="index.html" class="btn btn-ef-outline ms-2">Accueil</a>
+    <p class="text-muted mb-2">Certaines pages restent accessibles grâce au cache intelligent.</p>
+    <p id="offline-ticket-hint" class="text-muted small mb-4"></p>
+    <div class="d-flex flex-wrap gap-2 justify-content-center">
+      <a href="tickets-wallet.html" class="btn btn-ef-primary">
+        <i class="bi bi-ticket-perforated me-1"></i> Mes billets (cache)
+      </a>
+      <button type="button" class="btn btn-ef-outline" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Réessayer
+      </button>
+      <a href="index.html" class="btn btn-ef-outline">Accueil</a>
+    </div>
   </div>
+  <script src="js/pwa-store.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (typeof PWAStore === 'undefined') return;
+      const count = await PWAStore.getCachedTicketCount();
+      const el = document.getElementById('offline-ticket-hint');
+      if (el && count > 0) {
+        el.textContent = `${count} billet(s) disponible(s) hors ligne avec QR code.`;
+      }
+    });
+  </script>
 </body>
 </html>
